@@ -1,1 +1,7 @@
 .agents/
+data/
+coverage/
+node_modules/
+*.log
+.env
+.env.*

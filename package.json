@@ -1,0 +1,14 @@
+{
+  "name": "equipment-maintenance-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "设备维修与维保闭环的本地演示",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test",
+    "docs": "node scripts/generate-docs.mjs",
+    "check": "node --check src/domain.mjs && node --check src/server.mjs && node --check src/contracts.mjs && node --check public/app.js && node --check scripts/generate-docs.mjs"
+  }
+}
