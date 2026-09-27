@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备维修保养信息化管理系统综合功能清单</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 35px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2f54eb;
+        }
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        .header p {
+            color: #666;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        .module {
+            margin-bottom: 40px;
+        }
+        .module-title {
+            font-size: 22px;
+            color: #2f54eb;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #2f54eb;
+            padding-left: 15px;
+            font-weight: 700;
+        }
+        .sub-module {
+            margin-bottom: 30px;
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .sub-module-title {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #e5e5e5;
+            font-weight: 600;
+        }
+        .function-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(550px, 1fr));
+            gap: 15px;
+        }
+        .function-item {
+            background: #fff;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+            transition: box-shadow 0.2s ease;
+        }
+        .function-item:hover {
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        .function-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 6px;
+            font-size: 16px;
+        }
+        .function-desc {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .env-module {
+            background: #f0f7ff;
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+        .env-title {
+            font-size: 20px;
+            color: #2f54eb;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        .env-list {
+            list-style: none;
+            line-height: 2;
+            font-size: 16px;
+            color: #2c3e50;
+            padding-left: 10px;
+        }
+        .env-list li {
+            margin-bottom: 10px;
+            padding-left: 15px;
+            position: relative;
+        }
+        .env-list li::before {
+            content: "●";
+            color: #2f54eb;
+            position: absolute;
+            left: 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e5e5;
+            color: #666;
+            font-size: 14px;
+        }
+        /* 适配移动端 */
+        @media (max-width: 768px) {
+            .function-list {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .module-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>设备维修保养信息化管理系统综合功能清单</h1>
+            <p>融合多版功能文档，去重整合全量功能 | 覆盖多终端，适配设备全生命周期管理</p>
+        </div>
+
+        <!-- 一、通用基础功能（全终端适配） -->
+        <div class="module">
+            <div class="module-title">📌 通用基础功能（PC/小程序/APP全终端适配）</div>
+            <div class="sub-module">
+                <div class="sub-module-title">1. 用户管理</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">多方式账号登录/注册</div>
+                        <div class="function-desc">支持邮箱+验证码、账号密码、第三方授权登录，小程序/APP侧重便捷登录，PC端支持批量账号创建。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">账号信息管理</div>
+                        <div class="function-desc">支持密码找回/修改、个人信息（姓名、联系方式、头像）维护，PC端可对账号进行启用/禁用、实名认证操作。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">登录日志查看</div>
+                        <div class="function-desc">全终端可查看自身登录时间、IP、设备信息，PC端可查看全账号登录日志并进行筛选查询。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">2. 权限管理</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">多角色配置</div>
+                        <div class="function-desc">支持超级管理员、系统管理员、部门管理员、普通员工、维修人员、供应商等角色自定义配置。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">细粒度权限分配</div>
+                        <div class="function-desc">为角色分配菜单、操作、数据权限，支持字段级、行级数据隔离，小程序/APP仅展示当前账号可操作权限。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">权限管理与审计</div>
+                        <div class="function-desc">PC端支持角色复制/批量修改，记录全量权限操作日志并支持审计，小程序/APP无权限配置功能。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">3. 组织架构管理</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">组织架构编辑</div>
+                        <div class="function-desc">PC端支持部门/班组的创建、编辑、删除，调整人员归属部门，设置部门负责人，小程序/APP仅支持查看。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">架构可视化展示</div>
+                        <div class="function-desc">全终端以树形图展示企业组织架构，支持按层级展开/收起，快速定位人员与部门归属。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">4. 系统设置</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">基础参数配置</div>
+                        <div class="function-desc">PC端可配置维修类型、故障等级、保养周期等业务参数，小程序/APP仅按配置规则展示与使用。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">消息模板与数据管理</div>
+                        <div class="function-desc">PC端配置通知、提醒、工单推送等消息模板，支持数据自动/手动备份与恢复，小程序/APP无配置权限。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">日志与公告管理</div>
+                        <div class="function-desc">PC端可查询/导出全操作日志，发布版本更新公告；小程序/APP仅查看日志与公告内容。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">5. 消息通知</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">多类型消息提醒</div>
+                        <div class="function-desc">全终端接收待办事项、工单状态变更、设备异常告警等提醒，PC端以弹窗/侧边栏展示，移动端支持推送。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">消息管理</div>
+                        <div class="function-desc">支持消息已读/未读标记，全终端可查询消息历史记录，移动端可自定义消息接收类型与时段。</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 二、PC网页端专属功能（管理中枢/决策中心） -->
+        <div class="module">
+            <div class="module-title">🖥️ PC网页端专属功能（管理中枢/决策中心）</div>
+            <div class="sub-module">
+                <div class="sub-module-title">1. 驾驶舱与数据可视化（BI Dashboard）</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">全局核心KPI看板</div>
+                        <div class="function-desc">实时展示设备总数、完好率、故障率、停机时长、在线率、MTBF、MTTR等核心指标，滚动显示未完成工单。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">多维度图表分析</div>
+                        <div class="function-desc">以饼图、柱状图、折线图展示故障TOP排行、维修费用趋势、部门报修量，生成故障分布热力图。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">智能预警中心</div>
+                        <div class="function-desc">集中展示即将到期的保养计划、库存预警备件、设备异常参数，支持预警规则自定义与报表生成。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">绩效与成本看板</div>
+                        <div class="function-desc">展示维修人员工时、响应速度、满意度排名，统计月度/年度维修成本、备件消耗Top10、外委费用。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">2. 设备资产管理（全生命周期）</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">设备台账精细化管理</div>
+                        <div class="function-desc">支持Excel批量导入/导出，录入设备基础信息、技术参数、原值、折旧，多级树形分类（厂区/车间/产线）。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">设备档案与标识管理</div>
+                        <div class="function-desc">关联设备图纸、手册、视频等电子文档，批量生成/打印二维码/RFID标签，支持标签样式自定义。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">设备全生命周期流程</div>
+                        <div class="function-desc">管理设备验收、调拨、借用、封存、报废流程，自动生成设备履历，追溯全生命周期变更记录。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">特种设备专项管理</div>
+                        <div class="function-desc">建立特种设备台账，按法规生成检定校验计划，管理作业人员证书并设置到期预警，记录安全检查信息。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">设备关系与BOM管理</div>
+                        <div class="function-desc">维护父子设备、关联设备、替代设备关系图谱，构建设备BOM层级树（整机-部件-零件）并关联备件。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">设备状态实时监控</div>
+                        <div class="function-desc">以看板展示设备运行、停机、维修、保养、报废状态，支持批量变更设备状态，发起报废审批流程。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">3. 维保计划与点巡检管理</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">多类型预防性保养计划</div>
+                        <div class="function-desc">支持按时间、运行时长、产量、IoT传感器状态触发计划，配置计划模板与周期计算公式，批量创建/分配。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">保养计划智能管理</div>
+                        <div class="function-desc">甘特图展示计划排程，优化人员任务负荷，支持计划暂停/恢复/批量调整，到期自动生成保养工单。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">点检标准与计划管理</div>
+                        <div class="function-name">点检标准与计划管理</div>
+                        <div class="function-desc">定义点检部位、方法、判定标准，设置点检周期并优化巡检路线，自动生成点检任务并派发。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">保养/点检记录管理</div>
+                        <div class="function-desc">批量录入保养/点检记录，配置记录模板，自动扣减耗材，按年度/季度归档，支持多条件统计与报表生成。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">4. 维修工单全流程管理</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">工单创建与派单管理</div>
+                        <div class="function-desc">批量创建工单，设置优先级，支持手动派单、按技能标签自动派单、抢单模式，配置自动派单规则。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">工单执行监控与SLA管理</div>
+                        <div class="function-desc">实时监控工单状态，设置超时预警与升级机制，地图/GIS定位查看维修人员位置，支持工单回退/转单审批。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">维修费用与验收管理</div>
+                        <div class="function-desc">录入/审核人工、耗材、外协费用，关联工单核算维修成本，支持多节点验收，不合格可退回重新维修。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">工单统计与分析</div>
+                        <div class="function-desc">统计故障类型、维修时长、解决率，分析维修人员绩效，生成维修工单全维度可视化报表并支持导出/打印。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">5. 故障管理与知识库</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">故障上报与分级分类</div>
+                        <div class="function-desc">支持批量上报故障，按机械、电气、液压等类型分类，判定故障等级，对接IoT实现设备自动报警。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">故障深度分析</div>
+                        <div class="function-desc">开展故障树、帕累托、MTBF/MTTR分析，基于机器学习预测故障趋势，生成故障整改建议。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">故障知识库管理</div>
+                        <div class="function-desc">编辑/分类故障案例、解决方案，支持关键词检索与批量导入，维护故障现象标准化描述库。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">6. 耗材/备件全流程管理</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">备件基础管理</div>
+                        <div class="function-desc">支持ABC分类法，管理多仓库（中央库/车间库），建立备件电子图册，设置安全库存并动态调整。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">出入库与库存管理</div>
+                        <div class="function-desc">批量处理出入库，关联采购单/工单，支持以旧换新，创建盘点计划并分析差异，处理盘盈盘亏。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">备件采购与供应商管理</div>
+                        <div class="function-desc">发起采购申请与审批，管理供应商档案与合同，分析备件价格趋势，评估供应商交货及时率与质量。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">库存预警与台账</div>
+                        <div class="function-desc">设置最低/最高/临期库存预警，生成预警报表，多条件筛选库存台账，查询库存流水与出入库统计。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">7. 报表分析与打印配置</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">多类型标准化报表</div>
+                        <div class="function-desc">生成设备、保养、维修、库存综合报表，支持按部门/时间段/设备类型统计，开展趋势与成本分析。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">自定义报表设计</div>
+                        <div class="function-desc">拖拽式设计自定义报表，保存模板并支持定时生成，支持BI钻取分析与多维度交叉统计。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">打印模板配置</div>
+                        <div class="function-desc">自定义设备台账、工单、保养记录打印模板，支持logo、水印、签章配置，直接打印归档PDF。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">8. 系统集成与专属管理功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">大屏监控展示</div>
+                        <div class="function-desc">搭建设备状态、工单进度、保养完成率大屏，数据实时刷新，适配监控室大屏展示需求。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">可视化流程配置</div>
+                        <div class="function-desc">自定义维修工单、保养计划、报废申请、采购申请等审批流程，支持多节点、串行/并行审批。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">多系统数据接口</div>
+                        <div class="function-desc">对接ERP、OA、MES、HR、IoT平台，实现数据互通，支持API接口配置与数据同步任务设置。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">全量日志审计</div>
+                        <div class="function-desc">记录所有用户操作日志，包含操作人、时间、内容、数据修改前后对比，支持按条件查询/导出。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">移动端配置管理</div>
+                        <div class="function-desc">配置移动端巡检/保养点检项，设置消息推送规则，自定义移动端表单字段与展示样式。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">委外与维保商管理</div>
+                        <div class="function-desc">建立外部维保商库，生成外委工单，跟踪维修进度，对接合同与结算，对外包服务进行验收评分。</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 三、小程序端功能（轻量级应用/全员通用） -->
+        <div class="module">
+            <div class="module-title">📱 小程序端功能（微信/支付宝·轻量级应用）</div>
+            <div class="sub-module">
+                <div class="sub-module-title">1. 全员极简报修通道</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">扫码快速报修</div>
+                        <div class="function-desc">扫描设备二维码自动带出设备信息，无需登录/自动登录，支持拍照/短视频上传故障现场。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">故障便捷描述</div>
+                        <div class="function-desc">支持语音转文字、预设故障选项描述故障，自动获取当前位置，提交后接收微信服务通知提醒。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">报修进度追踪</div>
+                        <div class="function-desc">像查快递一样查看报修单状态（待派单/维修中/待验收），查看历史报修记录，支持相同故障快速复报。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">维修结果评价</div>
+                        <div class="function-desc">维修完成后接收验收提醒，对服务态度、技术能力、完成时间进行星级评分+文字评价，电子签名确认。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">2. 维修人员轻量作业功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">工单接收与处理</div>
+                        <div class="function-desc">微信模板消息提醒新工单，点击直达详情，支持接单/拒单/转单，日历视图展示本周任务分布。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">现场作业记录</div>
+                        <div class="function-desc">查看故障描述，填写维修记录与工时，扫码申领备件，维修前后强制拍照留存，防止虚假维修。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">知识速查</div>
+                        <div class="function-desc">按设备型号搜索操作指南，输入故障代码查含义，查看安全相关的应急处理方案。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">3. 巡检/保养人员基础功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">今日任务查看</div>
+                        <div class="function-desc">日历视图展示今日需完成的保养/点检任务，接收任务到期提醒，一键确认接单。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">点检项执行</div>
+                        <div class="function-desc">按照PC端配置的点检项逐项打钩/填写数值，发现异常可一键发起维修工单，带上下文数据同步。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">4. 管理层移动办公功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">移动端管理看板</div>
+                        <div class="function-desc">查看设备故障率趋势、维修任务完成率、关键设备OEE指标、备件资金占用情况，展示超期任务预警。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">移动审批</div>
+                        <div class="function-desc">查看待审批事项（保养计划、采购申请、设备报废），预览附件，语音/文字输入意见，支持审批委托。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">简易查询与统计</div>
+                        <div class="function-desc">预览简版日报/周报，快速搜索设备状态与保养记录，授权后查看维修人员实时位置与签到记录。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">5. 供应商/外协端协作功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">外协工单处理</div>
+                        <div class="function-desc">接收委外维修任务，反馈维修进度（已取件/维修中/已送回），在线提交维修报价与电子发票。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">服务评价查看</div>
+                        <div class="function-desc">查看企业对自身服务的验收评分与评价内容，基于评价优化服务流程。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">6. 小程序专属基础功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">消息与公告</div>
+                        <div class="function-desc">接收工单、保养、库存预警提醒，查看系统停机维护、安全警示等公告，支持消息已读/未读标记。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">简易知识库</div>
+                        <div class="function-desc">查看常见问答（FAQ），自助查询设备简单故障处理方法，检索历史相似故障解决方案。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">一键分享</div>
+                        <div class="function-desc">将设备台账、工单详情、简版报表通过微信分享给同事，支持快速转发与查看。</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 四、安卓/iOS原生APP端功能（深度作业/专业工具） -->
+        <div class="module">
+            <div class="module-title">📲 安卓/iOS原生APP端功能（深度作业/专业工具）</div>
+            <div class="sub-module">
+                <div class="sub-module-title">1. 工作台与任务中心</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">个人工作台定制</div>
+                        <div class="function-desc">展示待办任务总数，按优先级排序（紧急任务红色高亮），时间轴展示今日任务，查看个人绩效看板。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">扫码/NFC快速入口</div>
+                        <div class="function-desc">首页一键扫码，支持连续扫码与NFC感应识别，保存扫码历史，无网络时离线扫码缓存，联网自动同步。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">快捷入口自定义</div>
+                        <div class="function-desc">将发起工单、扫码、我的待办等常用功能添加至首页，一键触达，提升操作效率。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">2. 现场维修深度作业功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">离线作业能力</div>
+                        <div class="function-desc">无网络时下载任务包，本地录入工单/保养记录，SQLite加密存储数据，联网后自动批量同步，检测操作冲突。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">标准化作业引导</div>
+                        <div class="function-desc">逐步显示SOP步骤，每步需拍照/勾选确认才能进入下一步，强制安全确认（断电、挂牌上锁）并拍照上传。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">多媒体作业记录</div>
+                        <div class="function-name">多媒体作业记录</div>
+                        <div class="function-desc">高清照片标注、视频录制、语音备注，维修开始/结束自动时间戳，记录实际工时，扫码领用备件自动出库。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">智能技术支持</div>
+                        <div class="function-desc">离线查阅维修方案知识库，AI推荐类似故障案例，基于故障现象通过知识图谱检索解决方案。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">电子签名与验收</div>
+                        <div class="function-desc">维修完成后，维修工与验收人双电子签名确认，拍照验收，验收结果实时同步至PC端。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">3. 智能巡检与保养作业</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">巡检任务智能导航</div>
+                        <div class="function-desc">GIS/室内蓝牙Beacon定位，规划最优巡检路线，GPS+二维码/NFC双重校验到位，防止漏检/作弊。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">多方式巡检数据采集</div>
+                        <div class="function-desc">手动录入仪表读数、IoT传感器自动采集、OCR识别仪表盘，数据越限自动标红，照片添加时间/地点/设备水印。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">保养作业精细化管理</div>
+                        <div class="function-desc">查阅保养标准电子手册，核对工具清单，强制顺序执行保养步骤，润滑五定管理，扫码确认润滑点。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">异常快速处理</div>
+                        <div class="function-desc">巡检/保养发现异常，一键生成维修工单并同步上下文数据，草稿保存巡检记录，中途退出可恢复。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">4. 移动库存与备件管理</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">移动库存查询</div>
+                        <div class="function-desc">扫码查询备件实时库存、在途数量、占用数量，备件位置库位导航，图片比对确认备件信息。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">移动领退料与盘点</div>
+                        <div class="function-desc">关联工单扫码领料/退料，无库存时提交紧急采购申请，扫码盘点库存，实时上传盘点数据。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">工具管理</div>
+                        <div class="function-desc">扫描工具柜记录工具借还时间，超时未归提醒，管理个人工具箱工具的校准有效期。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">5. 设备档案与即时协作</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">设备档案移动查询</div>
+                        <div class="function-desc">查看设备基础信息卡片、实时运行状态，时间轴展示维修/保养历史，在线预览技术资料并支持放大。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">即时通讯与协作</div>
+                        <div class="function-desc">工单@相关人员请求支持，建立故障临时讨论组，语音对讲、实时视频求助，专家屏幕画圈指导。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">维修专家库查询</div>
+                        <div class="function-desc">按技能标签（电工/钳工/液压工程师）搜索专家，组织架构树查询人员，一键拨号联系相关负责人。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">6. 高级技术支持与管理功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">AR辅助维修</div>
+                        <div class="function-desc">调用摄像头扫描设备，屏幕叠加虚拟维修步骤动画/内部结构图，佩戴AR眼镜实现远程专家实时指导。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">3D模型查看</div>
+                        <div class="function-desc">在手机上旋转查看设备3D爆炸图，辅助设备拆解与维修，直观查看部件装配关系。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">移动BI驾驶舱</div>
+                        <div class="function-desc">为管理层定制专属报表，一键查看全厂设备OEE、维修费用占比，支持图表钻取与多维度分析。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">知识库与培训学习</div>
+                        <div class="function-desc">查看故障字典、维修视频教程，支持倍速播放与离线缓存，在线参加培训考试与技能认证。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">7. 个人中心与APP专属功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">个人成长与绩效</div>
+                        <div class="function-desc">展示个人技能矩阵与证书，查看计件工资、工时统计、奖惩记录，基于绩效制定个人提升计划。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">定位打卡与轨迹</div>
+                        <div class="function-desc">维修/保养人员现场GPS/NFC打卡，记录服务位置与时长，管理员可查看人员作业轨迹。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">APP专属设置</div>
+                        <div class="function-desc">自定义消息推送时段与类型，自动检测版本并一键更新，设备树楼层导航快速查找设备。</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 五、跨端协同特色功能（全终端通用） -->
+        <div class="module">
+            <div class="module-title">🔗 跨端协同特色功能（PC/小程序/APP全终端通用）</div>
+            <div class="sub-module">
+                <div class="sub-module-title">1. 智能预警与消息联动</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">多场景智能提醒</div>
+                        <div class="function-desc">保养到期多级提醒、故障超时升级提醒、备件库存预警、设备开机点检提醒、证书到期提前30天提醒。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">多渠道消息推送</div>
+                        <div class="function-desc">系统触发预警后，通过小程序服务通知、短信、APP Push推送给责任人，确保消息触达无遗漏。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">2. 二维码/NFC标签智能管理</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">标签生成与自定义</div>
+                        <div class="function-desc">PC端生成唯一设备/备件二维码/RFID标签，支持自定义标签样式（含Logo、设备名/备件名）并打印。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">身份化扫码跳转</div>
+                        <div class="function-desc">扫码后根据用户身份（操作工/维修工/管理员）自动跳转对应页面，实现权限化信息展示。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">3. 无纸化办公与电子签章</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">电子签名与单据同步</div>
+                        <div class="function-desc">工单验收、保养确认、报废审批等环节支持手写电子签名，签字后单据实时同步至PC端。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">电子签章与归档</div>
+                        <div class="function-desc">支持电子签章集成，单据生成带公章的PDF，直接打印归档，替代纸质单据，实现全流程无纸化。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">4. 2026年行业趋势特色功能</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">AI预测性维护</div>
+                        <div class="function-desc">基于历史数据与IoT实时数据，机器学习预测设备故障概率，自动生成预知维修工单，变被动救火为主动防御。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">数字孪生集成</div>
+                        <div class="function-desc">PC端展示设备3D数字孪生体，实时映射物理设备状态（温度场、振动模态），虚拟模拟维修方案。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">语音交互助手</div>
+                        <div class="function-desc">全系统支持语音指令创建工单、查询记录，维修过程中全程语音记录，解放双手提升作业效率。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">低代码自定义</div>
+                        <div class="function-desc">企业IT人员通过拖拽方式自定义表单字段、审批流程、报表样式，无需重新开发代码，适配个性化需求。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">多语言与国际化</div>
+                        <div class="function-desc">支持中、英、日、德等多语言一键切换，适配跨国工厂、海外分公司的设备管理需求。</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="sub-module">
+                <div class="sub-module-title">5. 数据安全与容灾保障</div>
+                <ul class="function-list">
+                    <li class="function-item">
+                        <div class="function-name">全链路数据加密</div>
+                        <div class="function-desc">数据传输采用HTTPS/TLS 1.3加密，移动端本地SQLite数据库加密存储，确保数据传输与存储安全。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">操作痕迹与版本回溯</div>
+                        <div class="function-desc">所有数据修改保留历史版本，记录操作痕迹，支持数据回溯，满足企业合规与审计要求。</div>
+                    </li>
+                    <li class="function-item">
+                        <div class="function-name">自动备份与容灾</div>
+                        <div class="function-desc">数据库每日自动备份，保留30天备份数据，支持手动恢复，兼容私有云/公有云/混合云部署，防止数据丢失。</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 六、运行环境与开发环境 -->
+        <div class="module env-module">
+            <div class="env-title">⚙️ 系统运行环境与开发环境</div>
+            <div class="sub-module" style="background: #fff;">
+                <div class="sub-module-title">1. 运行环境</div>
+                <ul class="env-list">
+                    <li>PC网页端：支持Chrome、Edge、Firefox、Safari等主流浏览器，分辨率≥1366*768，适配Windows/macOS系统。</li>
+                    <li>小程序端：支持微信小程序、支付宝小程序，适配微信8.0+、支付宝10.0+版本，兼容安卓/iOS手机端。</li>
+                    <li>APP端：支持Android 9.0+、iOS 13.0+系统，适配手机、平板，支持NFC、蓝牙、摄像头等硬件调用。</li>
+                    <li>服务端：支持Linux服务器（CentOS 7+/Ubuntu 18.04+），兼容Docker容器化部署，支持私有云/公有云/混合云。</li>
+                    <li>网络环境：PC端支持有线/无线局域网，移动端支持4G/5G/无线局域网，离线模式下无网络可正常作业。</li>
+                </ul>
+            </div>
+            <div class="sub-module" style="background: #fff; margin-top: 20px;">
+                <div class="sub-module-title">2. 开发环境</div>
+                <ul class="env-list">
+                    <li>前端开发：PC端采用Vue3/React + Ant Design Pro/Element Plus；小程序端采用Uni-app/原生开发；APP端采用Flutter/React Native，高性能模块用Swift/Kotlin原生开发。</li>
+                    <li>后端开发：基于Spring Boot/Spring Cloud微服务架构，支持分布式部署，高并发处理。</li>
+                    <li>数据库：MySQL（业务结构化数据）、MongoDB（非结构化日志/表单）、Redis（缓存/实时数据）、InfluxDB/TDengine（IoT时序数据）。</li>
+                    <li>接口开发：基于RESTful API规范，支持OpenAPI，提供与ERP/OA/MES等系统的对接接口。</li>
+                    <li>IoT集成：支持Modbus TCP/RTU、OPC UA、MQTT、HTTP API等主流协议，对接各类传感器、PLC设备。</li>
+                    <li>开发工具：IDEA、VS Code、Android Studio、Xcode、Postman、Navicat等主流开发与调试工具。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            本清单由豆包于2026年03月02日融合4版设备维修保养信息化管理系统功能文档整理，去重整合全量功能 | 所有功能均适配企业设备全生命周期管理需求
+        </div>
+    </div>
+</body>
+</html>
