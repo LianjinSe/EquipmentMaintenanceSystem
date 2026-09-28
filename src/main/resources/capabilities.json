@@ -1,0 +1,1188 @@
+{
+  "implemented": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "name": "服务状态",
+      "handler": "health",
+      "implemented": true,
+      "request": null,
+      "response": "{ mode: \"demo\", runtime: \"java-servlet\", version: \"0.2.0\", persistence: \"json-file\", today }",
+      "rule": "只说明本地服务可响应，不代表生产健康探针或容灾可用。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/actors",
+      "name": "演示身份列表",
+      "handler": "actors",
+      "implemented": true,
+      "request": null,
+      "response": "Actor[]：id/name/role/department",
+      "rule": "固定四个虚构角色。X-Demo-Actor 只用于流程演示，不能认证身份。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/state",
+      "name": "演示页面快照",
+      "handler": "snapshot",
+      "implemented": true,
+      "request": null,
+      "response": "{ actors, devices, orders, plans, tasks, messages, audit, summary }",
+      "rule": "全量读取演示数据；消息只返回当前角色的消息，审计仅管理员返回。设备和业务记录没有企业数据隔离。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/summary",
+      "name": "基础统计",
+      "handler": "summary",
+      "implemented": true,
+      "request": null,
+      "response": "{ devices, openOrders, pendingReview, pendingTasks, overdueTasks, closedOrders, today }",
+      "rule": "直接统计当前记录；超期指未完成任务的 scheduledDate 早于上海日期。不计算 MTBF/MTTR/OEE。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/capabilities",
+      "name": "接口实现清单",
+      "handler": "capabilities",
+      "implemented": true,
+      "request": null,
+      "response": "{ implemented: Contract[], reserved: Contract[] }",
+      "rule": "与路由使用同一注册表；每个预留接口都有输入示例、依赖和验收要求。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/devices",
+      "name": "设备查询",
+      "handler": "devices",
+      "implemented": true,
+      "request": {
+        "query": "可选 q：按编码、名称、位置包含查询"
+      },
+      "response": "Device[]（含 derivedStatus）",
+      "rule": "derivedStatus 由未关闭工单推导：reported/repairing/active；不代表实时采集到的物理运行状态。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/devices",
+      "name": "新增设备",
+      "handler": "createDevice",
+      "implemented": true,
+      "request": {
+        "code": "EQ-004",
+        "name": "演示设备",
+        "location": "一号车间",
+        "category": "加工设备"
+      },
+      "response": "Device：id/code/name/location/category/status/version/createdAt",
+      "rule": "仅管理员。code 1–40、name/location 1–80、category 1–40 字符；编码忽略大小写唯一。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/devices/{id}/history",
+      "name": "设备履历",
+      "handler": "deviceHistory",
+      "implemented": true,
+      "request": null,
+      "response": "{ device, orders: Order[], tasks: Task[], events: AuditEvent[] }",
+      "rule": "只查询该设备关联的工单、任务、计划事件；没有文档版本、调拨或报废履历。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/orders",
+      "name": "维修工单列表",
+      "handler": "orders",
+      "implemented": true,
+      "request": {
+        "query": "可选 status：工单状态；可选 deviceId：设备 ID"
+      },
+      "response": "Order[]",
+      "rule": "状态合法值见状态机；列表无分页，仅适合少量演示数据。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/orders/{id}",
+      "name": "工单详情",
+      "handler": "order",
+      "implemented": true,
+      "request": null,
+      "response": "Order（含 completions/reviews/history）",
+      "rule": "id 不存在返回 404；所有完工和验收尝试保留。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders",
+      "name": "报修",
+      "handler": "createOrder",
+      "implemented": true,
+      "request": {
+        "deviceId": "<设备 ID>",
+        "title": "运行异响",
+        "description": "演示故障描述",
+        "priority": "normal"
+      },
+      "response": "Order：初始 pending_assignment、version=1",
+      "rule": "标题 1–100、描述 1–1000 字符；priority=normal/urgent；允许各演示角色报修。重复 POST 会创建新工单，生产请求幂等尚未实现。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders/{id}/assign",
+      "name": "派单/接单前改派",
+      "handler": "assignOrder",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "assigneeId": "technician"
+      },
+      "response": "Order：pending_acceptance",
+      "rule": "管理员；只允许 pending_assignment/pending_acceptance，目标须为维修人员。处理中转单另待实现。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders/{id}/accept",
+      "name": "接单",
+      "handler": "acceptOrder",
+      "implemented": true,
+      "request": {
+        "version": 2
+      },
+      "response": "Order：in_progress",
+      "rule": "仅被指派人或管理员；须为 pending_acceptance。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders/{id}/reject",
+      "name": "拒单",
+      "handler": "rejectOrder",
+      "implemented": true,
+      "request": {
+        "version": 2,
+        "reason": "需要重新安排人员"
+      },
+      "response": "Order：pending_assignment，清空 assigneeId",
+      "rule": "仅被指派人或管理员；须为 pending_acceptance；原因 1–500 字符。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders/{id}/complete",
+      "name": "提交完工",
+      "handler": "completeOrder",
+      "implemented": true,
+      "request": {
+        "version": 3,
+        "summary": "检查连接件并记录结果",
+        "workMinutes": 30,
+        "materials": "密封圈 1 个（仅文字记录）",
+        "safetyConfirmed": true
+      },
+      "response": "Order：pending_review；新增 Completion",
+      "rule": "仅执行人或管理员；须为 in_progress；summary 1–1000、materials 可选 0–500；工时 1–10080 整数分钟；安全勾选不等于安全证据。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders/{id}/review",
+      "name": "验收/退回",
+      "handler": "reviewOrder",
+      "implemented": true,
+      "request": {
+        "version": 4,
+        "decision": "accept",
+        "note": "演示验收通过"
+      },
+      "response": "Order：accept→closed；return→in_progress",
+      "rule": "管理员或原报修人；须为 pending_review；note 1–500；完工和退回记录均保留。未实现多人验收、签名和职责分离。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders/{id}/cancel",
+      "name": "取消工单",
+      "handler": "cancelOrder",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "reason": "重复报修"
+      },
+      "response": "Order：cancelled",
+      "rule": "报修人仅能取消 pending_assignment；管理员还可取消 pending_acceptance/in_progress；待验收及终态不能取消。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/plans",
+      "name": "维保计划列表",
+      "handler": "plans",
+      "implemented": true,
+      "request": null,
+      "response": "Plan[]",
+      "rule": "保存周期和检查项；暂停只影响之后的生成，不撤销既有任务。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/plans",
+      "name": "新增周期计划",
+      "handler": "createPlan",
+      "implemented": true,
+      "request": {
+        "deviceId": "<设备 ID>",
+        "name": "每日点检",
+        "type": "inspection",
+        "intervalDays": 1,
+        "nextDueDate": "2026-09-27",
+        "assigneeId": "inspector",
+        "checklist": [
+          "油位",
+          "运行声音"
+        ]
+      },
+      "response": "Plan：active=true、version=1",
+      "rule": "仅管理员；type=inspection/maintenance；周期 1–3650 天；日期有效且为 2000–2100；检查项 1–20 个、各 1–100 字且不重复；执行人为 technician/inspector。"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/plans/{id}",
+      "name": "暂停/恢复计划",
+      "handler": "togglePlan",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "active": false
+      },
+      "response": "Plan",
+      "rule": "仅管理员；只更新 active；模板、周期、指派及日期变更尚未实现。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/plans/generate",
+      "name": "生成到期任务",
+      "handler": "generateTasks",
+      "implemented": true,
+      "request": {
+        "throughDate": "2026-09-27"
+      },
+      "response": "{ generated: Task[], count, throughDate }",
+      "rule": "仅管理员；截止日不得晚于上海今天；按计划原到期日逐周期补齐，每次最多 100 条；计划+日期去重；推进下次日期；无后台定时器。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks",
+      "name": "维保任务列表",
+      "handler": "tasks",
+      "implemented": true,
+      "request": {
+        "query": "可选 status：pending/completed"
+      },
+      "response": "Task[]",
+      "rule": "任务携带生成时检查项快照；同时列出保养和点检。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/{id}",
+      "name": "任务详情",
+      "handler": "task",
+      "implemented": true,
+      "request": null,
+      "response": "Task（含 checklist/results/history/linkedOrderId）",
+      "rule": "只提供两态 pending/completed；未实现接单、复核或撤销。"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{id}/complete",
+      "name": "执行维保/异常转维修",
+      "handler": "completeTask",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "results": [
+          {
+            "itemId": "<task.checklist 中的 ID>",
+            "verdict": "abnormal",
+            "reading": "演示读数",
+            "remark": "演示异常：有异响"
+          }
+        ],
+        "note": "作业备注"
+      },
+      "response": "Task：completed；异常时 linkedOrderId 指向新 Order",
+      "rule": "仅指派人或管理员；必须提交所有项目且不重复；verdict=normal/abnormal；异常 remark 必填；读数为文字，无阈值判定；所有异常汇总为一个工单，与任务同次原子保存。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/messages",
+      "name": "站内消息",
+      "handler": "messages",
+      "implemented": true,
+      "request": null,
+      "response": "Message[]",
+      "rule": "仅当前演示角色的消息；非真实短信、微信或 APP 推送。"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/messages/{id}/read",
+      "name": "消息已读",
+      "handler": "readMessage",
+      "implemented": true,
+      "request": {},
+      "response": "Message：read=true",
+      "rule": "只可修改自己的消息；重复标记已读无副作用，不使用 version。"
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit",
+      "name": "演示业务事件",
+      "handler": "audit",
+      "implemented": true,
+      "request": null,
+      "response": "AuditEvent[]",
+      "rule": "仅管理员；记录业务动作而非所有读写、登录或修改前后镜像；未防篡改。"
+    }
+  ],
+  "reserved": [
+    {
+      "id": "AUTH",
+      "name": "真实账号与认证",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "request": {
+        "account": "<账号>",
+        "credential": "<密码或授权票据>",
+        "provider": "password"
+      },
+      "response": "{ token, expiresAt, user }",
+      "scope": "账号注册、密码找回、验证码、第三方登录、账号停用、实名认证、登录日志。",
+      "dependencies": [
+        "企业身份源及开放注册政策",
+        "令牌与会话方案、密码和验证码策略"
+      ],
+      "acceptance": [
+        "错误凭据及过期会话被拒绝",
+        "停用账号不能继续调用接口，登录行为可审计"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "ACCESS",
+      "name": "组织与权限配置",
+      "method": "PUT",
+      "path": "/api/access/roles/{id}",
+      "request": {
+        "version": 1,
+        "name": "<角色>",
+        "menus": [],
+        "operations": [],
+        "dataScope": {
+          "departmentIds": []
+        },
+        "fields": []
+      },
+      "response": "{ role, version }",
+      "scope": "部门/班组维护、组织树、角色自定义、菜单/操作/字段/行级权限、角色复制及权限审计。",
+      "dependencies": [
+        "组织主数据及一人一责的授权规则",
+        "真实认证和企业/外协数据边界"
+      ],
+      "acceptance": [
+        "扫码、导出、附件、分享都服从权限",
+        "不同部门/企业/外协越权请求返回 403，变更可追溯"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "SETTINGS",
+      "name": "业务参数与移动表单",
+      "method": "PUT",
+      "path": "/api/settings",
+      "request": {
+        "version": 1,
+        "dictionaries": {},
+        "messageTemplates": [],
+        "mobileForms": []
+      },
+      "response": "{ settings, version }",
+      "scope": "故障字典、周期规则、公告、移动字段及布局、消息偏好设置；配置升级与兼容。",
+      "dependencies": [
+        "参数归属、编辑权限及版本策略",
+        "表单字段类型、校验及既有记录兼容规则"
+      ],
+      "acceptance": [
+        "配置修改不破坏历史记录",
+        "非法字段/规则被拒绝，配置有版本和审批记录"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "ASSET",
+      "name": "资产档案与生命周期",
+      "method": "POST",
+      "path": "/api/devices/{id}/lifecycle",
+      "request": {
+        "version": 1,
+        "action": "transfer",
+        "targetLocation": "<位置>",
+        "reason": "<原因>",
+        "attachments": []
+      },
+      "response": "{ requestId, status, deviceVersion }",
+      "scope": "设备编辑、Excel 导入导出、附件、标签打印、原值折旧、验收调拨借用封存报废。",
+      "dependencies": [
+        "资产数据与财务口径、审批人",
+        "文件服务、标签规格、设备状态流转"
+      ],
+      "acceptance": [
+        "导入有错误行报告和回滚边界",
+        "审批前后状态正确，履历保留前后值，报废设备不生成新任务"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "COMPLIANCE",
+      "name": "特种设备与证书",
+      "method": "POST",
+      "path": "/api/compliance/inspections",
+      "request": {
+        "deviceId": "<ID>",
+        "dueDate": "<日期>",
+        "certificateId": "<ID>",
+        "standardVersion": "<适用规则版本>"
+      },
+      "response": "{ inspectionId, reminders }",
+      "scope": "检定校验、安全检查、人员资质与到期提醒。",
+      "dependencies": [
+        "业务及安全负责人确认适用规则",
+        "合格机构、证书数据源、提前提醒规则"
+      ],
+      "acceptance": [
+        "适用期限及资质限制正确",
+        "过期/不合格的处置流程和证据可追溯"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "BOM",
+      "name": "设备关系与 BOM",
+      "method": "PUT",
+      "path": "/api/devices/{id}/bom",
+      "request": {
+        "version": 1,
+        "children": [
+          {
+            "deviceId": "<ID>",
+            "quantity": 1
+          }
+        ],
+        "sparePartIds": []
+      },
+      "response": "{ tree, version }",
+      "scope": "整机部件零件、父子/替代关系、备件关联。",
+      "dependencies": [
+        "设备及备件编码体系",
+        "版本、替代件及数量单位规则"
+      ],
+      "acceptance": [
+        "环路与重复关系被拒绝",
+        "变更保留版本，领料可按适用 BOM 查件"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "IOT",
+      "name": "设备数据与 IoT 告警",
+      "method": "POST",
+      "path": "/api/iot/telemetry",
+      "request": {
+        "deviceId": "<ID>",
+        "timestamp": "<ISO 时间>",
+        "metrics": {
+          "temperature": 0
+        },
+        "eventId": "<源唯一事件>"
+      },
+      "response": "{ accepted, duplicate, alarmIds }",
+      "scope": "MQTT/OPC UA/Modbus 等网关接入、运行状态、时序数据、异常阈值及自动报修。",
+      "dependencies": [
+        "网关及点位表、采样频率、单位",
+        "时钟、断连、重复/乱序与设备映射规则"
+      ],
+      "acceptance": [
+        "重复与乱序数据处理可验证",
+        "告警抑制/恢复准确，自动工单不重复，物理状态与业务状态区分"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "SCHEDULE",
+      "name": "高级计划与排程",
+      "method": "POST",
+      "path": "/api/scheduling/preview",
+      "request": {
+        "planIds": [],
+        "horizon": {
+          "from": "<日期>",
+          "to": "<日期>"
+        },
+        "triggers": [
+          "runtime"
+        ],
+        "resourceIds": []
+      },
+      "response": "{ proposedTasks, conflicts, explanation }",
+      "scope": "自动定时生成、运行时长/产量/状态触发、甘特图、负载、批量调整和路线规划。",
+      "dependencies": [
+        "生产日历、运行/产量数据、人员技能",
+        "计划变更、补任务、停用和调度规则"
+      ],
+      "acceptance": [
+        "跨时区/周期边界与重试不重复",
+        "排程冲突可解释，暂停/变更对既有任务的影响明确"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "WORKFLOW",
+      "name": "派单、SLA 与流程引擎",
+      "method": "POST",
+      "path": "/api/workflows/definitions",
+      "request": {
+        "name": "<流程>",
+        "version": 1,
+        "nodes": [],
+        "rules": {
+          "assignment": "skill",
+          "timeoutMinutes": 60
+        }
+      },
+      "response": "{ definitionId, version, validation }",
+      "scope": "自动派单、抢单、处理中转单/挂起、多节点审批、委托、SLA 计时和超时升级。",
+      "dependencies": [
+        "技能及工作日历、流程节点权限",
+        "计时暂停、升级责任人、流程版本与在途兼容规则"
+      ],
+      "acceptance": [
+        "并发抢单唯一成功，非法流转失败",
+        "超时边界及审批委托可验证，流程修改不破坏在途单据"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "COST",
+      "name": "费用、绩效及高级指标",
+      "method": "POST",
+      "path": "/api/analytics/calculate",
+      "request": {
+        "period": {
+          "from": "<日期>",
+          "to": "<日期>"
+        },
+        "metrics": [
+          "MTBF",
+          "MTTR",
+          "OEE"
+        ],
+        "dimensions": [
+          "department"
+        ]
+      },
+      "response": "{ metrics, missingInputs, sourceReferences }",
+      "scope": "人工耗材外协费用、停机时间、MTBF/MTTR/OEE、趋势/排名、满意度及绩效。",
+      "dependencies": [
+        "指标字典、生产时长/产量/良品及故障数据",
+        "费率、成本归集、统计排除规则和验收人"
+      ],
+      "acceptance": [
+        "指标能逐项回查原始数据",
+        "缺少运行/生产数据时明确不可计算，不返回伪造的零值"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "KNOWLEDGE",
+      "name": "故障知识与智能检索",
+      "method": "GET",
+      "path": "/api/knowledge/search",
+      "request": {
+        "query": {
+          "q": "<故障代码或关键词>",
+          "deviceModel": "<型号>"
+        }
+      },
+      "response": "{ items, total, sourceReferences }",
+      "scope": "故障分类、案例、FAQ、应急方案、故障树、帕累托及类似案例推荐。",
+      "dependencies": [
+        "审核后的知识来源、权限和内容责任人",
+        "版本、适用设备型号、安全内容审核规则"
+      ],
+      "acceptance": [
+        "检索结果有来源及适用范围",
+        "受限资料不可泄露；推荐错误或无证据时有明确处理路径"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "INVENTORY",
+      "name": "备件、领退料与盘点",
+      "method": "POST",
+      "path": "/api/inventory/transactions",
+      "request": {
+        "requestId": "<唯一请求>",
+        "kind": "issue",
+        "warehouseId": "<ID>",
+        "orderId": "<ID>",
+        "lines": [
+          {
+            "partId": "<ID>",
+            "quantity": 1,
+            "unit": "<单位>"
+          }
+        ]
+      },
+      "response": "{ transactionId, balances, ledgerReferences }",
+      "scope": "备件分类、多仓库/库位、占用、领退料、以旧换新、盘点盘盈亏、库存预警。",
+      "dependencies": [
+        "仓库及备件主数据、单位和唯一入账凭据",
+        "库存/工单耗材的扣减时点、并发锁及成本规则"
+      ],
+      "acceptance": [
+        "同一请求只入账一次，库存与流水可对账",
+        "不足库存与并发领料正确处理，退料不重复增加库存"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "PROCUREMENT",
+      "name": "采购及供应商合同",
+      "method": "POST",
+      "path": "/api/procurement/requests",
+      "request": {
+        "supplierId": "<ID>",
+        "reason": "<原因>",
+        "lines": [
+          {
+            "partId": "<ID>",
+            "quantity": 1
+          }
+        ],
+        "contractId": "<ID>"
+      },
+      "response": "{ requestId, approvalStatus }",
+      "scope": "采购申请审批、供应商合同、价格趋势、交货质量、急采及电子发票。",
+      "dependencies": [
+        "ERP/采购主责、供应商编码、合同规则",
+        "税务发票接口、验收及结算责任人"
+      ],
+      "acceptance": [
+        "申请、收货、库存、结算可对账",
+        "供应商仅能查看本方单据，重复同步不重复入账"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "REPORT",
+      "name": "报表、打印和大屏",
+      "method": "POST",
+      "path": "/api/reports/export",
+      "request": {
+        "reportType": "<类型>",
+        "filters": {},
+        "format": "pdf",
+        "templateId": "<ID>"
+      },
+      "response": "{ jobId, status, downloadUrl, expiresAt }",
+      "scope": "标准报表、可视化图表、大屏、自定义报表、BI 钻取、定时生成、PDF/Excel/打印模板。",
+      "dependencies": [
+        "数据口径及字段权限",
+        "文件生成器、模板、性能容量和下载有效期"
+      ],
+      "acceptance": [
+        "导出与页面查询口径一致且无越权字段",
+        "大数据异步导出可取消，模板及打印结果人工验收"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "INTEGRATION",
+      "name": "ERP/OA/MES/HR 接口",
+      "method": "POST",
+      "path": "/api/integrations/jobs",
+      "request": {
+        "system": "ERP",
+        "direction": "import",
+        "entity": "equipment",
+        "cursor": "<游标>",
+        "requestId": "<唯一请求>"
+      },
+      "response": "{ jobId, accepted, reconciliationUrl }",
+      "scope": "跨系统主数据、单据同步、接口配置及同步任务。",
+      "dependencies": [
+        "逐系统接口文档、沙箱、姓名及交付承诺",
+        "数据主责、编码映射、游标、错误补偿规则"
+      ],
+      "acceptance": [
+        "失败重试及重复请求不重复建账",
+        "双边可对账，失败记录可定位并按授权补偿"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "OUTSOURCE",
+      "name": "委外与维保商协作",
+      "method": "POST",
+      "path": "/api/outsource/orders",
+      "request": {
+        "orderId": "<ID>",
+        "supplierId": "<ID>",
+        "contractId": "<ID>",
+        "expectedReturnDate": "<日期>"
+      },
+      "response": "{ externalOrderId, status }",
+      "scope": "取件维修送回、报价、外委费用、验收评分、合同和结算。",
+      "dependencies": [
+        "外协身份、数据隔离和服务合同",
+        "内部与外部状态映射、付款与验收权责"
+      ],
+      "acceptance": [
+        "外协仅操作所属任务",
+        "内外工单状态一致且报价、发票、验收记录可关联"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "FILE",
+      "name": "照片、视频与技术资料",
+      "method": "POST",
+      "path": "/api/files/uploads",
+      "request": {
+        "entityType": "order",
+        "entityId": "<ID>",
+        "filename": "<名称>",
+        "contentType": "image/jpeg",
+        "size": 1
+      },
+      "response": "{ uploadId, uploadUrl, expiresAt }",
+      "scope": "作业前后照片、视频、语音、图纸手册、标注、水印、上传及下载。",
+      "dependencies": [
+        "文件存储与访问鉴权、大小和类型限制",
+        "保留期、扫描、失败重传及附件备份"
+      ],
+      "acceptance": [
+        "越权上传/下载失败",
+        "伪造类型、大文件、重复与中断上传可验证，附件随数据恢复"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "LABEL",
+      "name": "二维码/NFC/RFID 与分享",
+      "method": "POST",
+      "path": "/api/labels/generate",
+      "request": {
+        "entityType": "device",
+        "entityIds": [],
+        "format": "qr",
+        "templateId": "<ID>"
+      },
+      "response": "{ labels, printJobId }",
+      "scope": "唯一标签、打印样式、扫码身份跳转、NFC/RFID 及微信分享。",
+      "dependencies": [
+        "标签编码/打印机和端硬件能力",
+        "链接有效期、登录跳转及共享权限"
+      ],
+      "acceptance": [
+        "标签可实物扫码并找到正确设备",
+        "分享/标签不能绕过身份与数据权限，作废标签失效"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "MOBILE",
+      "name": "微信/支付宝与原生 APP",
+      "method": "POST",
+      "path": "/api/mobile/session",
+      "request": {
+        "platform": "wechat",
+        "authorizationCode": "<授权码>",
+        "appVersion": "<版本>"
+      },
+      "response": "{ session, permittedFeatures, updatePolicy }",
+      "scope": "真实小程序、原生 APP、专属工作台、快捷入口、版本更新、平板适配。",
+      "dependencies": [
+        "平台主体/账号/域名、真机和发布流程",
+        "登录、通知权限、应用版本及兼容矩阵"
+      ],
+      "acceptance": [
+        "在批准的机型、系统、平台版本验收",
+        "平台授权和深链打开正常，低版本及权限拒绝有处理路径"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "OFFLINE",
+      "name": "离线同步",
+      "method": "POST",
+      "path": "/api/offline/sync",
+      "request": {
+        "clientId": "<ID>",
+        "baseVersion": 1,
+        "operations": [
+          {
+            "operationId": "<唯一ID>",
+            "entityId": "<ID>",
+            "payload": {}
+          }
+        ]
+      },
+      "response": "{ acknowledged, conflicts, serverVersion }",
+      "scope": "离线任务包、加密存储、附件同步、重复/冲突和账号权限变化。当前用户确认在线作业，后续按必要性立项。",
+      "dependencies": [
+        "实体版本、操作幂等和冲突裁决规则",
+        "端侧密钥、安全擦除及断网验收环境"
+      ],
+      "acceptance": [
+        "重连后数据与附件无重复和遗漏",
+        "并发冲突、退出登录及撤权后离线数据处理可验证"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "SOP",
+      "name": "标准化安全作业",
+      "method": "POST",
+      "path": "/api/sop/executions",
+      "request": {
+        "taskId": "<ID>",
+        "templateVersion": "<版本>",
+        "steps": [
+          {
+            "stepId": "<ID>",
+            "checked": true,
+            "evidenceIds": []
+          }
+        ]
+      },
+      "response": "{ executionId, nextStep, status }",
+      "scope": "SOP 顺序、安全确认、断电挂牌、工具核对、润滑五定及强制拍照。",
+      "dependencies": [
+        "经业务及安全负责人批准的作业标准",
+        "不可跳步策略、证据要求及异常处置"
+      ],
+      "acceptance": [
+        "未完成必需步骤不能完工",
+        "标准版本与每步证据保留；软件记录的责任边界确认"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "SIGN",
+      "name": "电子签名、签章与归档",
+      "method": "POST",
+      "path": "/api/signatures",
+      "request": {
+        "entityType": "order",
+        "entityId": "<ID>",
+        "version": 1,
+        "signerId": "<ID>",
+        "provider": "<提供方>",
+        "evidenceId": "<ID>"
+      },
+      "response": "{ signatureId, documentHash, archivedUrl }",
+      "scope": "手写签名、双签、多节点验收、电子签章、公章 PDF 归档。",
+      "dependencies": [
+        "身份确认、签署权限和适用要求",
+        "签章服务、原文摘要、存证与保留规则"
+      ],
+      "acceptance": [
+        "签署对应的单据版本可证明且不可被后改冒用",
+        "签署拒绝、撤回、归档及权限有验收记录"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "LOCATION",
+      "name": "定位、导航与轨迹",
+      "method": "POST",
+      "path": "/api/location/checkins",
+      "request": {
+        "taskId": "<ID>",
+        "deviceId": "<ID>",
+        "position": {
+          "latitude": 0,
+          "longitude": 0
+        },
+        "proof": "<扫码或NFC证据>"
+      },
+      "response": "{ checkinId, matched, accuracy }",
+      "scope": "GPS/NFC 打卡、GIS、蓝牙 Beacon、巡检路线、库位/楼层导航、人员轨迹。",
+      "dependencies": [
+        "地图/室内设施、定位精度和有效区域",
+        "知情授权、查看权限、保留期及伪造检测"
+      ],
+      "acceptance": [
+        "定位拒绝及低精度有处理路径",
+        "实地到位判断可验收，轨迹仅授权人员可见"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "OCR",
+      "name": "仪表 OCR 与采集",
+      "method": "POST",
+      "path": "/api/ocr/readings",
+      "request": {
+        "taskId": "<ID>",
+        "itemId": "<ID>",
+        "fileId": "<ID>",
+        "meterType": "<型号>"
+      },
+      "response": "{ value, unit, confidence, requiresConfirmation }",
+      "scope": "仪表盘识别、人工复核、阈值标红和照片水印。",
+      "dependencies": [
+        "仪表类型、样本、阈值和允许误差",
+        "识别服务及人工确认规则"
+      ],
+      "acceptance": [
+        "在批准样本上达到业务确定的误差范围",
+        "低置信度转人工，原图与最终确认读数关联"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "TOOL",
+      "name": "工具借还与校准",
+      "method": "POST",
+      "path": "/api/tools/loans",
+      "request": {
+        "toolId": "<ID>",
+        "borrowerId": "<ID>",
+        "dueAt": "<时间>",
+        "taskId": "<ID>"
+      },
+      "response": "{ loanId, status, calibrationValid }",
+      "scope": "工具柜、借还、超时提醒、个人工具箱和校准期限。",
+      "dependencies": [
+        "工具编码、保管人、柜体接口和证书",
+        "借还授权、逾期及失效工具限制"
+      ],
+      "acceptance": [
+        "重复借出被拒绝，归还可核对",
+        "过期校准工具不能按批准规则投入作业"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "COLLAB",
+      "name": "通讯与专家协作",
+      "method": "POST",
+      "path": "/api/collaboration/rooms",
+      "request": {
+        "orderId": "<ID>",
+        "participantIds": [],
+        "mode": "video"
+      },
+      "response": "{ roomId, joinUrl, expiresAt }",
+      "scope": "工单评论/@、临时讨论组、视频/语音对讲、屏幕标注、专家技能库和人员联系。",
+      "dependencies": [
+        "通讯提供方、企业目录及专家技能",
+        "参与权限、网络能力、录制和保留政策"
+      ],
+      "acceptance": [
+        "非参与者不能加入或读记录",
+        "网络中断可恢复，协作内容与工单关联"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "AR3D",
+      "name": "AR 与 3D 模型",
+      "method": "GET",
+      "path": "/api/models/{id}",
+      "request": {
+        "query": {
+          "deviceId": "<ID>",
+          "variant": "exploded"
+        }
+      },
+      "response": "{ modelUrl, version, parts, instructions }",
+      "scope": "设备爆炸图、AR 步骤叠加、AR 眼镜远程协作。",
+      "dependencies": [
+        "合法模型资产、设备部件映射及版本",
+        "端渲染/AR 硬件、定位精度与现场验证"
+      ],
+      "acceptance": [
+        "模型与实物版本匹配",
+        "目标机型可加载，步骤位置和部件标识经现场确认"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "TRAINING",
+      "name": "培训、证书与个人绩效",
+      "method": "POST",
+      "path": "/api/training/enrollments",
+      "request": {
+        "courseId": "<ID>",
+        "employeeId": "<ID>",
+        "certificationId": "<ID>"
+      },
+      "response": "{ enrollmentId, progress, qualificationStatus }",
+      "scope": "维修视频学习、考试认证、技能矩阵、计件工资、奖惩、个人提升。",
+      "dependencies": [
+        "培训内容、考试题库、证书及 HR 主责",
+        "薪酬/奖惩口径、可见范围与批准流程"
+      ],
+      "acceptance": [
+        "学习考试与有效资质关联",
+        "工资和评价可核对原始规则，敏感信息严格限制访问"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "AI",
+      "name": "预测维护、孪生与语音",
+      "method": "POST",
+      "path": "/api/intelligence/jobs",
+      "request": {
+        "kind": "prediction",
+        "deviceId": "<ID>",
+        "datasetVersion": "<版本>",
+        "modelVersion": "<版本>",
+        "inputs": {}
+      },
+      "response": "{ jobId, result, evidence, uncertainty }",
+      "scope": "故障概率、预知维修、数字孪生温度/振动映射、维修模拟、语音指令及记录。",
+      "dependencies": [
+        "历史/实时数据和模型资产、业务效果基线",
+        "专项验证、误报漏报、人工确认与回退策略"
+      ],
+      "acceptance": [
+        "输出附数据/模型来源及不确定性",
+        "按批准指标验收，语音/AI 不能未经授权自动产生关键业务动作"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "LOWCODE",
+      "name": "低代码与国际化",
+      "method": "POST",
+      "path": "/api/customizations",
+      "request": {
+        "version": 1,
+        "forms": [],
+        "workflows": [],
+        "reports": [],
+        "locale": "zh-CN"
+      },
+      "response": "{ customizationId, validation, publishedVersion }",
+      "scope": "拖拽表单、流程/报表配置、多语言和发布回滚。",
+      "dependencies": [
+        "字段/流程元模型、权限、插件边界",
+        "翻译、时区单位、配置迁移及兼容政策"
+      ],
+      "acceptance": [
+        "恶意配置和权限绕过被拒绝",
+        "历史单据兼容，发布回滚和多语言格式可验证"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "SECURITY",
+      "name": "生产安全与审计回溯",
+      "method": "POST",
+      "path": "/api/security/audit-exports",
+      "request": {
+        "from": "<时间>",
+        "to": "<时间>",
+        "entityType": "<类型>",
+        "reason": "<原因>"
+      },
+      "response": "{ jobId, signedDigest, archiveUrl }",
+      "scope": "HTTPS、端存储加密、全量操作与前后值、版本回溯、防篡改及审计导出。",
+      "dependencies": [
+        "安全标准、密钥管理、保留期及审计权限",
+        "日志链路与加密/解密恢复方案"
+      ],
+      "acceptance": [
+        "密钥轮换、越权和审计完整性可验证",
+        "恢复/回溯保留历史且经过授权，不能通过改本地文件冒充历史"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "BACKUP",
+      "name": "备份恢复与部署",
+      "method": "POST",
+      "path": "/api/backups/jobs",
+      "request": {
+        "kind": "backup",
+        "scope": "database-and-files",
+        "restorePointId": null
+      },
+      "response": "{ jobId, status, manifest, verification }",
+      "scope": "每日备份/保留30天、手动恢复、容灾、生产监控、多种云部署。",
+      "dependencies": [
+        "批准的恢复点/时间目标、存储及运行负责人",
+        "数据库和附件一致备份、恢复权限及切换方案"
+      ],
+      "acceptance": [
+        "真实执行恢复演练并对账",
+        "备份失败能告警，批准的恢复目标满足；导出 JSON 不算完整容灾"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    },
+    {
+      "id": "PUSH",
+      "name": "多渠道消息与告警升级",
+      "method": "POST",
+      "path": "/api/notifications/deliveries",
+      "request": {
+        "eventId": "<唯一事件>",
+        "recipientIds": [],
+        "channels": [
+          "wechat"
+        ],
+        "templateId": "<ID>",
+        "variables": {}
+      },
+      "response": "{ deliveryId, channelResults, retryAt }",
+      "scope": "微信/支付宝服务通知、短信、APP Push、偏好时段、多级提醒及库存/证书告警。",
+      "dependencies": [
+        "平台模板、许可、账号和渠道资费",
+        "事件去重、重试、回执、静默时段及升级规则"
+      ],
+      "acceptance": [
+        "发送失败及限流可追踪并补发",
+        "关键待办不依赖单次推送成功，不能承诺无遗漏触达"
+      ],
+      "implemented": false,
+      "status": "reserved"
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 # Demo API 与预留接口契约
 
-> 本文由 `src/contracts.mjs` 通过 `npm run docs` 生成；修改接口时请先更新注册表，再重新生成。本文件中的预留契约是设计草案，尚不构成稳定 API。
+> 本文与 `src/main/resources/capabilities.json` 及 Java Servlet 路由对应。修改接口时须同步更新注册表、实现、本文和测试。预留契约是设计草案，尚不构成稳定 API。
 
 已实现路由 27 个；预留能力 33 个。
 
 ## 通用约定
 
-- 服务默认仅监听 `127.0.0.1:4173`，API 前缀 `/api`，写入请求采用 `Content-Type: application/json`，请求体上限 512 KiB。
+- 演示 WAR 在本机 Tomcat 11 的示例地址为 `http://127.0.0.1:8080/equipment-maintenance-demo/`，应用内 API 前缀 `/api`，写入请求采用 `Content-Type: application/json`，请求体上限 512 KiB。
 - 演示角色通过 `X-Demo-Actor: admin|operator|technician|inspector` 传入。它是**可伪造的演示选择器**，不是账号认证、授权、企业数据隔离或上线安全机制。写入请求必须传入有效值。
 - 成功响应为 `{ "data": ... }`。失败响应为 `{ "error": { "code": "...", "message": "...", "details": null } }`。预留接口固定返回 `501 NOT_IMPLEMENTED`，`details` 还包含能力 ID、输入草案、依赖与验收要求。
 - 新增设备、工单、计划返回 HTTP 201；其他已实现成功操作返回 200。未知路由返回 404，状态或版本不匹配返回 409。
@@ -34,11 +34,11 @@
 
 **输入示例：**无请求体
 
-**成功返回 data：** { mode: "demo", persistence: "json-file", today }
+**成功返回 data：** { mode: "demo", runtime: "java-servlet", version: "0.2.0", persistence: "json-file", today }
 
 **行为、权限及校验：** 只说明本地服务可响应，不代表生产健康探针或容灾可用。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `health`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `health` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/actors` — 演示身份列表
 
@@ -48,7 +48,7 @@
 
 **行为、权限及校验：** 固定四个虚构角色。X-Demo-Actor 只用于流程演示，不能认证身份。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `actors`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `actors` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/state` — 演示页面快照
 
@@ -58,7 +58,7 @@
 
 **行为、权限及校验：** 全量读取演示数据；消息只返回当前角色的消息，审计仅管理员返回。设备和业务记录没有企业数据隔离。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `snapshot`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `snapshot` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/summary` — 基础统计
 
@@ -68,7 +68,7 @@
 
 **行为、权限及校验：** 直接统计当前记录；超期指未完成任务的 scheduledDate 早于上海日期。不计算 MTBF/MTTR/OEE。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `summary`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `summary` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/capabilities` — 接口实现清单
 
@@ -78,7 +78,7 @@
 
 **行为、权限及校验：** 与路由使用同一注册表；每个预留接口都有输入示例、依赖和验收要求。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `capabilities`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `capabilities` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/devices` — 设备查询
 
@@ -94,7 +94,7 @@
 
 **行为、权限及校验：** derivedStatus 由未关闭工单推导：reported/repairing/active；不代表实时采集到的物理运行状态。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `devices`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `devices` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/devices` — 新增设备
 
@@ -113,7 +113,7 @@
 
 **行为、权限及校验：** 仅管理员。code 1–40、name/location 1–80、category 1–40 字符；编码忽略大小写唯一。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `createDevice`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `createDevice` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/devices/{id}/history` — 设备履历
 
@@ -123,7 +123,7 @@
 
 **行为、权限及校验：** 只查询该设备关联的工单、任务、计划事件；没有文档版本、调拨或报废履历。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `deviceHistory`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `deviceHistory` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/orders` — 维修工单列表
 
@@ -139,7 +139,7 @@
 
 **行为、权限及校验：** 状态合法值见状态机；列表无分页，仅适合少量演示数据。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `orders`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `orders` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/orders/{id}` — 工单详情
 
@@ -149,7 +149,7 @@
 
 **行为、权限及校验：** id 不存在返回 404；所有完工和验收尝试保留。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `order`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `order` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/orders` — 报修
 
@@ -168,7 +168,7 @@
 
 **行为、权限及校验：** 标题 1–100、描述 1–1000 字符；priority=normal/urgent；允许各演示角色报修。重复 POST 会创建新工单，生产请求幂等尚未实现。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `createOrder`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `createOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/orders/{id}/assign` — 派单/接单前改派
 
@@ -185,7 +185,7 @@
 
 **行为、权限及校验：** 管理员；只允许 pending_assignment/pending_acceptance，目标须为维修人员。处理中转单另待实现。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `assignOrder`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `assignOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/orders/{id}/accept` — 接单
 
@@ -201,7 +201,7 @@
 
 **行为、权限及校验：** 仅被指派人或管理员；须为 pending_acceptance。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `acceptOrder`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `acceptOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/orders/{id}/reject` — 拒单
 
@@ -218,7 +218,7 @@
 
 **行为、权限及校验：** 仅被指派人或管理员；须为 pending_acceptance；原因 1–500 字符。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `rejectOrder`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `rejectOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/orders/{id}/complete` — 提交完工
 
@@ -238,7 +238,7 @@
 
 **行为、权限及校验：** 仅执行人或管理员；须为 in_progress；summary 1–1000、materials 可选 0–500；工时 1–10080 整数分钟；安全勾选不等于安全证据。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `completeOrder`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `completeOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/orders/{id}/review` — 验收/退回
 
@@ -256,7 +256,7 @@
 
 **行为、权限及校验：** 管理员或原报修人；须为 pending_review；note 1–500；完工和退回记录均保留。未实现多人验收、签名和职责分离。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `reviewOrder`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `reviewOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/orders/{id}/cancel` — 取消工单
 
@@ -273,7 +273,7 @@
 
 **行为、权限及校验：** 报修人仅能取消 pending_assignment；管理员还可取消 pending_acceptance/in_progress；待验收及终态不能取消。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `cancelOrder`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `cancelOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/plans` — 维保计划列表
 
@@ -283,7 +283,7 @@
 
 **行为、权限及校验：** 保存周期和检查项；暂停只影响之后的生成，不撤销既有任务。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `plans`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `plans` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/plans` — 新增周期计划
 
@@ -308,7 +308,7 @@
 
 **行为、权限及校验：** 仅管理员；type=inspection/maintenance；周期 1–3650 天；日期有效且为 2000–2100；检查项 1–20 个、各 1–100 字且不重复；执行人为 technician/inspector。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `createPlan`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `createPlan` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### PATCH `/api/plans/{id}` — 暂停/恢复计划
 
@@ -325,7 +325,7 @@
 
 **行为、权限及校验：** 仅管理员；只更新 active；模板、周期、指派及日期变更尚未实现。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `togglePlan`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `togglePlan` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/plans/generate` — 生成到期任务
 
@@ -341,7 +341,7 @@
 
 **行为、权限及校验：** 仅管理员；截止日不得晚于上海今天；按计划原到期日逐周期补齐，每次最多 100 条；计划+日期去重；推进下次日期；无后台定时器。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `generateTasks`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `generateTasks` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/tasks` — 维保任务列表
 
@@ -357,7 +357,7 @@
 
 **行为、权限及校验：** 任务携带生成时检查项快照；同时列出保养和点检。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `tasks`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `tasks` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/tasks/{id}` — 任务详情
 
@@ -367,7 +367,7 @@
 
 **行为、权限及校验：** 只提供两态 pending/completed；未实现接单、复核或撤销。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `task`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `task` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### POST `/api/tasks/{id}/complete` — 执行维保/异常转维修
 
@@ -392,7 +392,7 @@
 
 **行为、权限及校验：** 仅指派人或管理员；必须提交所有项目且不重复；verdict=normal/abnormal；异常 remark 必填；读数为文字，无阈值判定；所有异常汇总为一个工单，与任务同次原子保存。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `completeTask`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `completeTask` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/messages` — 站内消息
 
@@ -402,7 +402,7 @@
 
 **行为、权限及校验：** 仅当前演示角色的消息；非真实短信、微信或 APP 推送。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `messages`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `messages` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### PATCH `/api/messages/{id}/read` — 消息已读
 
@@ -416,7 +416,7 @@
 
 **行为、权限及校验：** 只可修改自己的消息；重复标记已读无副作用，不使用 version。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `readMessage`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `readMessage` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ### GET `/api/audit` — 演示业务事件
 
@@ -426,7 +426,7 @@
 
 **行为、权限及校验：** 仅管理员；记录业务动作而非所有读写、登录或修改前后镜像；未防篡改。
 
-**调用位置：** `src/server.mjs` 路由分派到 `src/domain.mjs` 中的 `audit`（GET 为读处理器）。
+**实现映射：** `capabilities.json` 的 handler `audit` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
 
 ## 预留接口（调用会返回 501）
 

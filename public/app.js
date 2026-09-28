@@ -26,7 +26,8 @@ function toast(message, error = false) {
   toastTimer = setTimeout(() => { $('#toast').hidden = true; }, error ? 7000 : 3500);
 }
 async function api(path, method = 'GET', data) {
-  const response = await fetch(path, { method, headers: { 'X-Demo-Actor': actorId, ...(data !== undefined ? { 'Content-Type': 'application/json' } : {}) }, ...(data !== undefined ? { body: JSON.stringify(data) } : {}) });
+  const url = new URL(path.replace(/^\//, ''), document.baseURI);
+  const response = await fetch(url, { method, headers: { 'X-Demo-Actor': actorId, ...(data !== undefined ? { 'Content-Type': 'application/json' } : {}) }, ...(data !== undefined ? { body: JSON.stringify(data) } : {}) });
   const body = await response.json();
   if (!response.ok) {
     const error = new Error(body.error?.message || `请求失败 ${response.status}`);
@@ -69,7 +70,7 @@ function render() {
       '<div class="demo-strip"><strong>在线流程演示</strong><span>初始内容为虚构样例；操作会保存到本地。先体验维修闭环，再执行一次异常点检。</span></div>' +
       `<div class="stats">${stats.map(([label, value, note, icon, warning]) => `<section class="stat ${warning}"><div class="stat-label">${label}<span class="stat-symbol" aria-hidden="true">${icon}</span></div><div class="stat-value">${value}</div><div class="stat-note">${note}</div></section>`).join('')}</div>` +
       `<div class="grid-two">${panel('维修待办', ordersTable(snapshot.orders.filter(item => !['closed', 'cancelled'].includes(item.status)).slice(0, 5), true), '<a class="text-button" href="#orders">全部工单 →</a>')}${panel('近期保养与点检', taskLines(snapshot.tasks.filter(item => item.status === 'pending').slice(0, 4)), '<a class="text-button" href="#tasks">全部任务 →</a>')}</div>` +
-      `<div class="grid-two">${panel('最近业务动态', `<div class="panel-body timeline">${(snapshot.audit.length ? snapshot.audit : snapshot.orders.flatMap(item => item.history).sort((a, b) => b.at.localeCompare(a.at))).slice(0, 4).map(item => `<div class="event-line">${e(item.detail)}<div class="event-time">${e(item.actorName)} · ${e(when(item.at))}</div></div>`).join('') || '<div class="empty">暂无动态</div>'}</div>`)}${panel('演示与开发说明', '<div class="panel-body"><div class="link-row">接口契约与错误码<a href="/docs/api" target="_blank" rel="noopener">查看 →</a></div><div class="link-row">未完成部分与接续条件<a href="/docs/unfinished" target="_blank" rel="noopener">查看 →</a></div><div class="link-row">原清单 103 项覆盖矩阵<a href="/docs/coverage" target="_blank" rel="noopener">查看 →</a></div></div>')}</div>`;
+      `<div class="grid-two">${panel('最近业务动态', `<div class="panel-body timeline">${(snapshot.audit.length ? snapshot.audit : snapshot.orders.flatMap(item => item.history).sort((a, b) => b.at.localeCompare(a.at))).slice(0, 4).map(item => `<div class="event-line">${e(item.detail)}<div class="event-time">${e(item.actorName)} · ${e(when(item.at))}</div></div>`).join('') || '<div class="empty">暂无动态</div>'}</div>`)}${panel('演示与开发说明', '<div class="panel-body"><div class="link-row">接口契约与错误码<a href="docs/api" target="_blank" rel="noopener">查看 →</a></div><div class="link-row">未完成部分与接续条件<a href="docs/unfinished" target="_blank" rel="noopener">查看 →</a></div><div class="link-row">原清单 103 项覆盖矩阵<a href="docs/coverage" target="_blank" rel="noopener">查看 →</a></div></div>')}</div>`;
   } else if (currentView === 'devices') {
     html = head('设备编码、位置与业务履历。状态由工单推导，未接入实时传感器。', admin() ? button('＋ 新增设备', 'new-device', '', true) : '') +
       `<section class="panel"><div class="filters"><input id="device-search" type="search" aria-label="搜索设备" placeholder="搜索设备名称、编码或位置" value="${e(deviceSearch)}"><span class="filter-note">共 ${snapshot.devices.length} 台设备</span></div><div id="device-table">${deviceTable()}</div></section>`;
@@ -83,7 +84,7 @@ function render() {
     html = head('基于日期的周期计划，生成任务后保留检查项快照。', admin() ? button('＋ 新建计划', 'new-plan', '', true) + button('生成到期任务', 'generate') : '') +
       `<section class="panel"><div class="table-scroll"><table><thead><tr><th>计划名称</th><th>设备</th><th>周期</th><th>下次到期</th><th>执行人</th><th>状态</th><th></th></tr></thead><tbody>${snapshot.plans.map(plan => `<tr><td><div class="cell-main">${e(plan.name)}</div><div class="cell-sub">${plan.type === 'maintenance' ? '保养' : '点检'} · ${plan.checklist.length} 项标准</div></td><td>${e(device(plan.deviceId)?.name)}</td><td>${plan.intervalDays} 天</td><td>${e(plan.nextDueDate)}</td><td>${e(person(plan.assigneeId))}</td><td>${plan.active ? badge('active') : badge('cancelled').replace('已取消', '已暂停')}</td><td>${admin() ? `<button class="text-button" data-action="toggle-plan" data-id="${e(plan.id)}">${plan.active ? '暂停' : '恢复'}</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7">暂无计划</td></tr>'}</tbody></table></div></section>`;
   } else {
-    html = head('实际实现与预留接口使用同一份契约注册表。', '<a class="button" href="/docs/api" target="_blank" rel="noopener">完整 API 说明 ↗</a>') +
+    html = head('实际实现与预留接口使用同一份契约注册表。', '<a class="button" href="docs/api" target="_blank" rel="noopener">完整 API 说明 ↗</a>') +
       `<div class="demo-strip"><strong>${capabilities.implemented.length} 个可用接口</strong><span>${capabilities.reserved.length} 个预留接口明确返回 HTTP 501，不会返回虚假的业务成功。</span></div>` +
       panel('预留能力与实现条件', `<div class="panel-body">${capabilities.reserved.map(item => `<details class="contract"><summary><span class="contract-summary-name">${e(item.name)}</span>${badge('reserved')}<code>${e(item.method)} ${e(item.path)}</code></summary><div class="contract-body"><p>${e(item.scope)}</p><h3>输入草案</h3><pre>${e(JSON.stringify(item.request, null, 2))}</pre><h3>目标返回</h3><code>${e(item.response)}</code><h3>前置依赖</h3><ul>${item.dependencies.map(value => `<li>${e(value)}</li>`).join('')}</ul><h3>验收条件</h3><ul>${item.acceptance.map(value => `<li>${e(value)}</li>`).join('')}</ul><button class="button" data-action="try-reserved" data-id="${e(item.id)}">验证未实现响应</button></div></details>`).join('')}</div>`);
   }
@@ -242,7 +243,7 @@ async function start() {
     navigate();
   } catch (error) {
     $('#content').setAttribute('aria-busy', 'false');
-    $('#content').innerHTML = `<section class="error-panel"><h1>演示服务未就绪</h1><p>${e(error.message)}</p><p>请确认已运行 npm start，然后刷新页面。</p></section>`;
+    $('#content').innerHTML = `<section class="error-panel"><h1>演示服务未就绪</h1><p>${e(error.message)}</p><p>请确认 Tomcat 11 已部署并启动当前 WAR，然后刷新页面。</p></section>`;
   }
 }
 start();

@@ -1,83 +1,79 @@
-# 设备维修保养系统 · 最小 Demo
+# 设备维修保养系统 · Java/Tomcat 最小 Demo
 
-一个可在本机运行的在线流程演示：设备台账、维修工单、按日期的保养/点检计划、异常转维修、站内消息与设备履历。服务端和页面均使用 Node.js 内置能力与原生 HTML/CSS/JavaScript，**无需安装 npm 依赖**。
+本项目展示设备台账、维修工单、按日期的保养/点检计划、异常转维修、站内消息和设备履历。前端为原生 **HTML + CSS + JavaScript**，后端为 **Java 17 + Jakarta Servlet**，通过 **Tomcat 11** 运行。仓库根目录的 `pom.xml` 可直接由 IntelliJ IDEA 打开。
 
-> 这是虚构数据的单机演示。页面上的“演示角色”可随意切换，不是登录或真实权限系统。请勿输入真实生产、人员、供应商或设备敏感数据，也不要将此服务直接暴露到公网。
+> 当前是虚构数据的单机流程演示。页面上的“演示角色”可自行切换，不能作为真实登录或企业数据权限使用。不要输入真实生产资料，也不要把此应用直接开放到公网。
 
-## 运行
+## 本机环境和入口
 
-需要 **Node.js 22 或以上版本**。项目在本地 Node 24.9.0 完成测试；`package.json` 的最低版本为 22。可以先运行 `node --version` 确认。
+已在本机确认：JDK 17、Tomcat 11.0.25 和 IntelliJ IDEA 自带 Maven。双击 [启动演示.cmd](启动演示.cmd) 会执行 Maven 构建，将 WAR 部署到本机 Tomcat 的独立应用路径，等待健康接口就绪后打开浏览器：
 
-**Windows 一键入口：**在仓库目录双击 [启动演示.cmd](启动演示.cmd)。它会在本机后台启动服务，确认就绪后打开浏览器；完成后双击 [停止演示.cmd](停止演示.cmd) 关闭该入口启动的服务。服务仍只监听 `127.0.0.1`，运行数据保存在 Git 忽略的 `data/` 中。
+**http://127.0.0.1:8080/equipment-maintenance-demo/**
+
+此 WAR 的访问过滤器仅接受本机回环地址；即使共享 Tomcat 的 8080 端口监听其他网卡，也不能从其他机器操作这个未认证的演示应用。过滤器只作用于本应用上下文，不影响 Tomcat 的其他应用。
+
+双击 [停止演示.cmd](停止演示.cmd) 只会关闭**由该启动入口启动**的 Tomcat。如果 Tomcat 原本由 IDEA、Windows 服务或你自己启动，停止入口不会关闭它。Tomcat 是同一台机器上的共享应用服务器；若由启动入口启动，停止 Tomcat 也会停止这台实例承载的其他应用。WAR 部署在 `E:\Program Files\Apache Software Foundation\Tomcat 11.0\webapps\equipment-maintenance-demo.war`，不会覆盖现有的 `ROOT` 应用。
+
+首次构建需要 Maven 能取得 `pom.xml` 中声明的依赖。`target/` 是构建产物，不纳入 Git。
+
+## 在 IntelliJ IDEA 中打开
+
+1. 用 IDEA 的 **Open** 选择本仓库目录或根目录 [pom.xml](pom.xml)，让 Maven 导入项目，Project SDK 设为 JDK 17。
+2. 在 Maven 工具窗口执行 `test` 与 `package`。生成的 WAR 位于 `target/equipment-maintenance-demo.war`。
+3. 在 IDEA 配置本机 Tomcat 11，部署 WAR 或 WAR exploded，应用上下文设为 `/equipment-maintenance-demo`；也可直接运行 `启动演示.cmd` 完成构建和部署。
+4. 打开上面的应用地址。API 在同一上下文下的 `/api/*`，例如 `/equipment-maintenance-demo/api/health`。
+
+在终端使用 IDEA 内置 Maven 的命令示例：
 
 ```powershell
-git clone https://github.com/LianjinSe/EquipmentMaintenanceSystem.git
-cd EquipmentMaintenanceSystem
-npm start
+& 'D:/Program Files/JetBrains/IntelliJ IDEA 2024.3.2.2/plugins/maven-plugin/lib/maven3/bin/mvn.cmd' test
+& 'D:/Program Files/JetBrains/IntelliJ IDEA 2024.3.2.2/plugins/maven-plugin/lib/maven3/bin/mvn.cmd' package
 ```
 
-打开 [http://127.0.0.1:4173](http://127.0.0.1:4173)。默认只监听 `127.0.0.1`，因此同一局域网中的其他机器也无法直接访问。首次启动会写入 `data/demo.json` 和虚构样例；后续重启会读取同一文件，操作结果会保留。
+若 `mvn` 已在 PATH 中，也可直接用 `mvn test`、`mvn package`。JUnit 测试使用临时文件，不会修改 Tomcat 中的演示数据。源码位于标准 Maven 目录，Servlet API 由 Tomcat 提供。
 
-```powershell
-npm run docs   # 从接口注册表与原清单重新生成两份文档
-npm run check  # JavaScript 语法检查
-npm test       # Node 原生测试：真实 HTTP 和本地文件持久化
-```
+## 演示数据与恢复边界
 
-以上脚本不需要 `npm install`。本项目没有 TypeScript 类型检查，`check` 仅检查语法。
+首次部署会生成虚构的三台设备、一张待派工单和两项周期计划。默认 JSON 文件位于 **Tomcat 的 `data/equipment-maintenance-demo/demo.json`**，不在应用的 webapps 公开目录，也不会被 Git 提交。重启 Tomcat 后可继续使用同一演示数据；如果该文件损坏，应用会拒绝启动并保留原文件。
 
-可选环境变量：
-
-| 变量 | 默认值 | 用途 |
-|---|---|---|
-| `PORT` | `4173` | 本机监听端口（1–65535） |
-| `DATA_FILE` | `<仓库>/data/demo.json` | 演示 JSON 文件路径；可指向另一个**不存在**的路径获得新的虚构样例 |
-
-使用 `npm start` 前台运行时，停止服务按 `Ctrl+C`。通过双击入口启动时，使用“停止演示.cmd”。需要新一份演示数据时，建议设置新的 `DATA_FILE` 路径并启动。已有数据文件若损坏或版本不受支持，服务会报错并保留原文件，不会悄悄覆盖。
+可以通过 JVM 系统属性 `equipment.demo.data` 或环境变量 `EQUIPMENT_DEMO_DATA` 指定另一个数据文件路径，便于 IDEA 调试或使用全新演示数据。之前的本地 `data/demo.json` 原型文件不会被新部署自动覆盖或迁移；确需继续使用时，先核对并备份，再显式指定路径。当前 JSON 文件只服务于**单个 Tomcat 实例**，不提供数据库事务、多进程锁、备份或灾备。
 
 ## 建议体验顺序
 
-1. **看初始样例：**打开工作概览。首次启动有三台虚构设备、一张待派工单和两个周期计划，计划生成的任务包含到期点检。
-2. **走维修闭环：**保持“陈管理员”，进入“维修工单”，打开待派工单并派给“顾维修工”；切换演示角色为顾维修工，接单、填写完工记录；切回陈管理员或报修人，验收通过。也可以先选择退回，再二次完工和验收，以观察历史记录保留。
-3. **走维保异常：**在“保养与点检”中打开待执行点检；切换为指派的“林巡检员”，逐项填写结果，让其中一项选“异常”并写说明。提交后任务完成并关联一张新维修工单。管理员可继续派单。
-4. **检查重复生成：**管理员在“周期计划”或“保养与点检”点击“生成到期任务”。已生成的同计划同日期任务不会重复出现。暂停计划仅影响之后的生成，不删除旧任务。
-5. **看设备与消息：**“设备台账”可新增设备、搜索和查看业务履历；“模拟扫码报修”只会预选设备。消息按钮按当前演示角色显示站内消息并可标记已读。
-6. **看预留接口：**“接口与进展”逐项显示输入草案、前置依赖、验收条件；调用预留接口会返回 `501 NOT_IMPLEMENTED`。
+1. 在工作概览查看虚构设备、待办与基础计数。
+2. 管理员进入“维修工单”派单；切换到维修工接单并提交完工；切回管理员或原报修人，验收通过。也可先退回，再完成二次维修和验收。
+3. 在“保养与点检”用指派的巡检员逐项录入结果；任一项填写异常和说明后，任务与自动创建的维修工单关联。
+4. 管理员在“周期计划”新建计划、手动生成到期任务，重复生成不会为同一计划日期重复派发；暂停计划只影响后续生成。
+5. 在“设备台账”新增、搜索设备并查看业务履历；消息菜单可查看和标记站内消息已读。
+6. “接口与进展”列出 27 个实际路由和 33 个预留能力；预留接口实际返回 `501 NOT_IMPLEMENTED`。
 
-## 已实现与保留边界
-
-| 实际可演示 | 当前边界 |
-|---|---|
-| 设备新增、列表搜索、业务履历 | 无 Excel 导入、真实二维码/RFID、附件、资产调拨/报废 |
-| 报修、派单、接单/拒单、完工、验收/退回/取消 | 无自动派单、SLA、多人验收、真实签名或安全 SOP 证据；重复报修请求不幂等 |
-| 按天周期计划、手动生成、逐项执行、异常转维修 | 无后台定时生成、运行时长/产量/IoT 触发或计划变更审批 |
-| 基础计数、站内消息、业务事件 | 无真实推送、完整审计、成本核算、MTBF/MTTR/OEE |
-| 单机 JSON 文件保存、写失败不发布变更 | 无数据库、多进程事务、备份恢复与灾备 |
-| 浏览器响应式页面 | 不是真正的微信/支付宝小程序或原生 APP；扫码入口仅模拟 |
-
-网页状态“正常/已报修/维修中”只从工单推导，**不是传感器采集的设备运行状态**。完工的“耗材记录”只保存文字，**不会扣减库存或生成费用**。勾选“已完成现场安全检查”只用于演示表单流转，**不等于已完成安全作业或上传证据**。
-
-完整资料：
-
-- [API 与全部预留接口](docs/demo/API.md)：由 `src/contracts.mjs` 生成，含每个方法/路径、输入、返回、规则、依赖与验收。
-- [未完成部分与实施说明](docs/demo/未完成部分与实施说明.md)：当前缺口、实现入口、所需输入和验收要求。
-- [原清单 103 项覆盖矩阵](docs/demo/功能覆盖矩阵.md)：逐卡片标明现状及关联预留能力。
-- [验证记录](docs/demo/验证记录.md)：实际命令测试、浏览器流程与未验证边界。
-- [项目规划建议](docs/设备维保系统项目规划建议.md)：之前的分阶段规划。
-
-## 目录与接口约定
+## 技术结构
 
 ```text
-public/                浏览器页面、样式与交互
-src/domain.mjs         业务规则、虚构种子数据与状态机
-src/server.mjs         本地 HTTP、文件保存、静态文件白名单
-src/contracts.mjs      已实现/预留接口注册表
-scripts/generate-docs.mjs 由注册表及原 HTML 生成文档
-test/demo.test.mjs     真实 HTTP 与文件持久化测试
-docs/demo/             API、功能覆盖与未完成说明
-data/                  运行数据（Git 忽略，不上传）
+pom.xml                                      IDEA/Maven WAR 构建入口
+src/main/java/com/equipmentmaintenance/demo/
+  ApiServlet.java                            Tomcat HTTP 路由与响应
+  LocalOnlyFilter.java                        演示应用仅允许本机访问
+  DemoDomain.java                            设备、工单、维保状态与规则
+  DemoStore.java                             单机 JSON 保存与读取
+  DemoException.java                         业务错误及 HTTP 状态
+src/main/resources/capabilities.json        已实现/预留接口注册表
+src/main/webapp/WEB-INF/web.xml              Servlet 与欢迎页映射
+src/test/java/.../DemoStoreTest.java         JUnit 业务与持久化测试
+public/                                      HTML、CSS、JavaScript 页面
+docs/demo/                                   API、功能覆盖与未完成说明
+scripts/start-demo.ps1                       本机 Maven/Tomcat 启动入口
+scripts/stop-demo.ps1                        只停止启动入口拥有的 Tomcat
 ```
 
-API 使用 `/api` 前缀。写请求要发送 JSON 与 `X-Demo-Actor`；成功是 `{ "data": ... }`，错误是 `{ "error": { "code": "...", "message": "...", "details": null } }`。资源变更通常要求 `version`，过期返回 409。预留接口在当前版本均返回 501，**即使注册表里有目标响应格式，也没有真实业务结果**。详见 [API.md](docs/demo/API.md)。
+写入 API 使用 JSON 与 `X-Demo-Actor` 演示角色。成功响应为 `{ "data": ... }`，错误响应为 `{ "error": { "code": "...", "message": "...", "details": null } }`。资源版本冲突返回 409；预留接口返回 501。完整输入、返回、规则和依赖见 [API 文档](docs/demo/API.md)。
 
-如要进入真实试点，需要先由业务负责人确认目标、设备及维保标准、身份与数据访问边界，再替换本地文件存储并完成安全、恢复和现场验收。此 Demo 的页面和接口不得直接当作生产系统上线。
+## 边界与文档
+
+- 账号切换只用于演示，没有真实认证、角色配置或企业数据隔离。
+- “模拟扫码报修”只是选择设备，不调用摄像头或生成真实二维码。
+- 完工耗材只保存文字，不扣库存或计算费用；安全勾选不是现场安全 SOP 证据。
+- 首页状态从工单推导，不是传感器采集的设备运行状态。
+- 响应式网页并非微信小程序或原生 APP。
+
+更多材料：[未完成部分与实施说明](docs/demo/未完成部分与实施说明.md)、[原清单 103 项覆盖矩阵](docs/demo/功能覆盖矩阵.md)、[验证记录](docs/demo/验证记录.md)及[项目规划建议](docs/设备维保系统项目规划建议.md)。

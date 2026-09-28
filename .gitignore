@@ -1,7 +1,7 @@
 .agents/
 data/
 coverage/
-node_modules/
+target/
 *.log
 .env
 .env.*

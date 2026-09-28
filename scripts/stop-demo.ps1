@@ -1,42 +1,44 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $taskRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$taskPidFile = Join-Path $taskRoot 'data/demo.pid'
-$taskUrl = 'http://127.0.0.1:4173/api/health'
+$taskTomcat = 'E:/Program Files/Apache Software Foundation/Tomcat 11.0'
+$taskOwnerFile = Join-Path $taskRoot 'data/tomcat-owned.pid'
+$taskHealthUrl = 'http://127.0.0.1:8080/equipment-maintenance-demo/api/health'
 
 try {
-    if (-not (Test-Path -LiteralPath $taskPidFile -PathType Leaf)) {
-        Write-Host '没有通过“启动演示.cmd”启动的服务。'
+    if (-not (Test-Path -LiteralPath $taskOwnerFile -PathType Leaf)) {
+        Write-Host 'This launcher did not start Tomcat; the existing Tomcat process was left running.'
         exit 0
     }
-
     $taskRecordedId = 0
-    if (-not [int]::TryParse((Get-Content -LiteralPath $taskPidFile -Raw).Trim(), [ref]$taskRecordedId) -or $taskRecordedId -le 0) {
-        throw '演示进程记录无效；未停止任何进程。'
+    if (-not [int]::TryParse((Get-Content -LiteralPath $taskOwnerFile -Raw).Trim(), [ref]$taskRecordedId) -or $taskRecordedId -le 0) {
+        throw 'Invalid launcher process record; no process was stopped.'
     }
-
-    $taskProcess = Get-Process -Id $taskRecordedId -ErrorAction SilentlyContinue
-    if (-not $taskProcess) {
-        Remove-Item -LiteralPath $taskPidFile -Force
-        Write-Host '记录的演示进程已退出。'
+    $taskListener = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $_.OwningProcess -eq $taskRecordedId }
+    if (-not $taskListener) {
+        Remove-Item -LiteralPath $taskOwnerFile -Force
+        Write-Host 'The Tomcat process started by the launcher has already exited.'
         exit 0
     }
-    if ($taskProcess.ProcessName -ne 'node') {
-        throw '记录的进程 ID 已被其他程序使用；未停止任何进程。'
+    $taskHealth = Invoke-RestMethod -Uri $taskHealthUrl -TimeoutSec 2
+    if ($taskHealth.data.mode -ne 'demo' -or $taskHealth.data.runtime -ne 'java-servlet') {
+        throw 'The process is not serving the expected Java demo; no process was stopped.'
     }
 
-    $taskListener = Get-NetTCPConnection -LocalPort 4173 -State Listen -ErrorAction SilentlyContinue |
-        Where-Object { $_.LocalAddress -eq '127.0.0.1' -and $_.OwningProcess -eq $taskRecordedId }
-    if (-not $taskListener) {
-        throw '记录的进程未监听演示地址；未停止任何进程。'
+    $env:JAVA_HOME = 'C:/Program Files/Java/jdk-17'
+    $env:CATALINA_HOME = $taskTomcat
+    $env:CATALINA_BASE = $taskTomcat
+    & (Join-Path $taskTomcat 'bin/catalina.bat') stop
+    if ($LASTEXITCODE -ne 0) { throw 'Tomcat did not accept the shutdown request.' }
+    for ($taskAttempt = 0; $taskAttempt -lt 30; $taskAttempt++) {
+        $taskStillListening = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.OwningProcess -eq $taskRecordedId }
+        if (-not $taskStillListening) { break }
+        Start-Sleep -Milliseconds 500
     }
-    $taskHealth = Invoke-RestMethod -Uri $taskUrl -TimeoutSec 2
-    if ($taskHealth.data.mode -ne 'demo' -or $taskHealth.data.persistence -ne 'json-file') {
-        throw '监听进程不是预期演示服务；未停止任何进程。'
-    }
-
-    Stop-Process -Id $taskRecordedId -Force
-    Remove-Item -LiteralPath $taskPidFile -Force
-    Write-Host '本地演示服务已停止。'
+    if ($taskStillListening) { throw 'Tomcat is still running; the process record was kept for another attempt.' }
+    Remove-Item -LiteralPath $taskOwnerFile -Force
+    Write-Host 'The Tomcat process started by the launcher has stopped.'
     exit 0
 } catch {
     Write-Error $_.Exception.Message
