@@ -8,6 +8,8 @@
 
 需要 **Node.js 22 或以上版本**。项目在本地 Node 24.9.0 完成测试；`package.json` 的最低版本为 22。可以先运行 `node --version` 确认。
 
+**Windows 一键入口：**在仓库目录双击 [启动演示.cmd](启动演示.cmd)。它会在本机后台启动服务，确认就绪后打开浏览器；完成后双击 [停止演示.cmd](停止演示.cmd) 关闭该入口启动的服务。服务仍只监听 `127.0.0.1`，运行数据保存在 Git 忽略的 `data/` 中。
+
 ```powershell
 git clone https://github.com/LianjinSe/EquipmentMaintenanceSystem.git
 cd EquipmentMaintenanceSystem
@@ -31,7 +33,7 @@ npm test       # Node 原生测试：真实 HTTP 和本地文件持久化
 | `PORT` | `4173` | 本机监听端口（1–65535） |
 | `DATA_FILE` | `<仓库>/data/demo.json` | 演示 JSON 文件路径；可指向另一个**不存在**的路径获得新的虚构样例 |
 
-停止服务按 `Ctrl+C`。需要新一份演示数据时，建议设置新的 `DATA_FILE` 路径并启动。已有数据文件若损坏或版本不受支持，服务会报错并保留原文件，不会悄悄覆盖。
+使用 `npm start` 前台运行时，停止服务按 `Ctrl+C`。通过双击入口启动时，使用“停止演示.cmd”。需要新一份演示数据时，建议设置新的 `DATA_FILE` 路径并启动。已有数据文件若损坏或版本不受支持，服务会报错并保留原文件，不会悄悄覆盖。
 
 ## 建议体验顺序
 
