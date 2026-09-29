@@ -4,37 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>维保工作台 · Equipment Maintenance</title>
+  <title>设备维保 · 工作日</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js" defer></script>
+  <script type="module" src="app.js"></script>
 </head>
-<body>
-  <div class="shell">
-    <aside class="sidebar">
-      <a class="brand" href="#dashboard"><span class="brand-symbol">维</span><span>设备维保<span class="brand-sub">MAINTENANCE WORKSPACE</span></span></a>
-      <div class="nav-caption">工作空间</div>
-      <nav aria-label="主导航">
-        <a href="#dashboard" data-view="dashboard"><span aria-hidden="true">◫</span> 工作概览</a>
-        <a href="#devices" data-view="devices"><span aria-hidden="true">▦</span> 设备台账</a>
-        <a href="#orders" data-view="orders"><span aria-hidden="true">▤</span> 维修工单</a>
-        <a href="#tasks" data-view="tasks"><span aria-hidden="true">✓</span> 保养与点检</a>
-        <a href="#plans" data-view="plans"><span aria-hidden="true">▥</span> 周期计划</a>
-        <a href="#capabilities" data-view="capabilities"><span aria-hidden="true">↗</span> 接口与进展</a>
+<body class="quiet">
+  <div class="quiet-shell">
+    <header class="quiet-top">
+      <a class="quiet-brand" href="#dashboard"><span class="quiet-brand-mark">维</span><span><strong>设备维保</strong><small>THE WORKBENCH</small></span></a>
+      <nav class="quiet-nav" aria-label="主导航">
+        <a href="#dashboard" data-view="dashboard">概览</a>
+        <a href="#orders" data-view="orders">维修工单</a>
+        <a href="#tasks" data-view="tasks">维保任务</a>
+        <a href="#devices" data-view="devices">设备台账</a>
+        <a href="#plans" data-view="plans">周期计划</a>
+        <a href="#capabilities" data-view="capabilities">接口与进展</a>
       </nav>
-      <div class="sidebar-foot"><span class="status-dot"></span> 本地演示环境<small>Tomcat · Java Servlet</small></div>
-    </aside>
-    <div class="main-column">
-      <header class="topbar">
-        <span class="workspace-name">试点工厂 <span class="top-separator">/</span> 设备管理</span>
-        <div class="top-controls">
-          <label class="actor-label" for="actor">演示角色</label>
-          <select id="actor" aria-label="切换演示角色"></select>
-          <button id="messages-button" class="button quiet">消息 <span id="unread-count" class="count">0</span></button>
-        </div>
-      </header>
-      <main id="content" tabindex="-1" aria-busy="true"><div class="loading">正在加载本地演示数据…</div></main>
-      <footer class="page-footer">演示数据 · 角色切换仅用于流程体验，真实认证及企业数据隔离待实现。</footer>
-    </div>
+      <div class="quiet-top-right">
+        <label class="actor-label" for="actor">演示角色</label>
+        <select id="actor" aria-label="切换演示角色"></select>
+        <button id="messages-button" type="button" aria-label="站内消息">◌<em id="unread-count">0</em></button>
+      </div>
+    </header>
+    <main id="content" class="quiet-main" tabindex="-1" aria-busy="true"><div class="loading">正在加载本地演示数据…</div></main>
+    <footer class="page-footer">本地流程演示 · 角色切换仅用于体验，真实认证和数据隔离尚未实现。</footer>
   </div>
   <dialog id="dialog" aria-labelledby="dialog-title">
     <div class="dialog-head"><h2 id="dialog-title"></h2><button id="close-dialog" class="icon-button" aria-label="关闭弹窗">×</button></div>

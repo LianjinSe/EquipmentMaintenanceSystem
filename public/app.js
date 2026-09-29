@@ -1,3 +1,5 @@
+import { renderView, renderOrderRows, renderTaskRows, renderDeviceCards } from './quiet-view.js';
+
 const $ = selector => document.querySelector(selector);
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const e = escapeHTML;
@@ -9,6 +11,7 @@ let actorId = localStorage.getItem('demo-actor') || 'admin';
 if (!['admin', 'operator', 'technician', 'inspector'].includes(actorId)) actorId = 'admin';
 let currentView = 'dashboard';
 let deviceSearch = '';
+let orderSearch = '';
 let orderFilter = '';
 let taskFilter = 'pending';
 let toastTimer;
@@ -42,60 +45,24 @@ async function load() {
   $('#unread-count').textContent = snapshot.messages.filter(item => !item.read).length;
   $('#content').setAttribute('aria-busy', 'false');
 }
-function head(description, actions = '') {
-  const [title, eyebrow] = views[currentView];
-  return `<div class="page-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p class="subtitle">${description}</p></div><div class="head-actions">${actions}</div></div>`;
+function button(label, action, id = '', primary = false) {
+  return `<button class="button ${primary ? 'primary' : ''}" type="button" data-action="${action}" data-id="${e(id)}">${label}</button>`;
 }
-function button(label, action, id = '', primary = false) { return `<button class="button ${primary ? 'primary' : ''}" data-action="${action}" data-id="${e(id)}">${label}</button>`; }
-function panel(title, body, action = '') { return `<section class="panel"><div class="panel-head"><h2>${title}</h2>${action}</div>${body}</section>`; }
-function ordersTable(orders, compact = false) {
-  if (!orders.length) return '<div class="empty">暂无符合条件的维修工单</div>';
-  return `<div class="table-scroll"><table><thead><tr><th>工单 / 故障</th><th>设备</th><th>状态</th>${compact ? '' : '<th>执行人</th><th>优先级</th>'}<th></th></tr></thead><tbody>${orders.map(order => `<tr><td><div class="cell-main">${e(order.title)}</div><div class="cell-sub">${e(order.number)}</div></td><td>${e(device(order.deviceId)?.name)}</td><td>${badge(order.status)}</td>${compact ? '' : `<td>${e(person(order.assigneeId))}</td><td>${badge(order.priority)}</td>`}<td><button class="text-button" data-action="order" data-id="${e(order.id)}">查看 →</button></td></tr>`).join('')}</tbody></table></div>`;
-}
-function taskLines(tasks) {
-  if (!tasks.length) return '<div class="empty">暂无待执行任务</div>';
-  return `<div class="panel-body list">${tasks.map(task => `<div class="task-line"><span class="task-icon" aria-hidden="true">${task.type === 'inspection' ? '✓' : '▥'}</span><div class="task-info"><div class="task-title">${e(task.name)}</div><div class="task-meta">${e(device(task.deviceId)?.name)} · ${e(task.scheduledDate)}${task.status === 'pending' && task.scheduledDate < snapshot.summary.today ? ' · 已超期' : ''}</div></div><button class="text-button" data-action="task" data-id="${e(task.id)}">查看</button></div>`).join('')}</div>`;
-}
+function ordersTable(orders) { return renderOrderRows(snapshot, orders, e); }
+function taskLines(tasks) { return renderTaskRows(snapshot, tasks, e); }
 function render() {
   if (!snapshot) return;
   for (const link of document.querySelectorAll('[data-view]')) {
     link.classList.toggle('active', link.dataset.view === currentView);
-    if (link.dataset.view === currentView) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
+    if (link.dataset.view === currentView) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
   }
-  const s = snapshot.summary;
-  let html = '';
-  if (currentView === 'dashboard') {
-    const stats = [['设备总数', s.devices, '当前设备台账', '▦', ''], ['未关闭工单', s.openOrders, `已关闭 ${s.closedOrders} 张`, '▤', ''], ['待执行维保', s.pendingTasks, '保养与点检任务', '✓', ''], ['超期任务', s.overdueTasks, '截至 ' + s.today, '◷', 'warning']];
-    html = head('让每一次维修有记录，每一项保养有落实。', button('＋ 发起报修', 'new-order', '', true)) +
-      '<div class="demo-strip"><strong>在线流程演示</strong><span>初始内容为虚构样例；操作会保存到本地。先体验维修闭环，再执行一次异常点检。</span></div>' +
-      `<div class="stats">${stats.map(([label, value, note, icon, warning]) => `<section class="stat ${warning}"><div class="stat-label">${label}<span class="stat-symbol" aria-hidden="true">${icon}</span></div><div class="stat-value">${value}</div><div class="stat-note">${note}</div></section>`).join('')}</div>` +
-      `<div class="grid-two">${panel('维修待办', ordersTable(snapshot.orders.filter(item => !['closed', 'cancelled'].includes(item.status)).slice(0, 5), true), '<a class="text-button" href="#orders">全部工单 →</a>')}${panel('近期保养与点检', taskLines(snapshot.tasks.filter(item => item.status === 'pending').slice(0, 4)), '<a class="text-button" href="#tasks">全部任务 →</a>')}</div>` +
-      `<div class="grid-two">${panel('最近业务动态', `<div class="panel-body timeline">${(snapshot.audit.length ? snapshot.audit : snapshot.orders.flatMap(item => item.history).sort((a, b) => b.at.localeCompare(a.at))).slice(0, 4).map(item => `<div class="event-line">${e(item.detail)}<div class="event-time">${e(item.actorName)} · ${e(when(item.at))}</div></div>`).join('') || '<div class="empty">暂无动态</div>'}</div>`)}${panel('演示与开发说明', '<div class="panel-body"><div class="link-row">接口契约与错误码<a href="docs/api" target="_blank" rel="noopener">查看 →</a></div><div class="link-row">未完成部分与接续条件<a href="docs/unfinished" target="_blank" rel="noopener">查看 →</a></div><div class="link-row">原清单 103 项覆盖矩阵<a href="docs/coverage" target="_blank" rel="noopener">查看 →</a></div></div>')}</div>`;
-  } else if (currentView === 'devices') {
-    html = head('设备编码、位置与业务履历。状态由工单推导，未接入实时传感器。', admin() ? button('＋ 新增设备', 'new-device', '', true) : '') +
-      `<section class="panel"><div class="filters"><input id="device-search" type="search" aria-label="搜索设备" placeholder="搜索设备名称、编码或位置" value="${e(deviceSearch)}"><span class="filter-note">共 ${snapshot.devices.length} 台设备</span></div><div id="device-table">${deviceTable()}</div></section>`;
-  } else if (currentView === 'orders') {
-    html = head('从报修到验收，保留处理和退回记录。', button('＋ 发起报修', 'new-order', '', true)) +
-      `<section class="panel"><div class="filters"><select id="order-filter" aria-label="工单状态筛选"><option value="">全部状态</option>${['pending_assignment', 'pending_acceptance', 'in_progress', 'pending_review', 'closed', 'cancelled'].map(status => `<option value="${status}" ${orderFilter === status ? 'selected' : ''}>${stateLabels[status]}</option>`).join('')}</select><span class="filter-note">当前角色：${e(actor().name)}</span></div>${ordersTable(snapshot.orders.filter(item => !orderFilter || item.status === orderFilter))}</section>`;
-  } else if (currentView === 'tasks') {
-    html = head('逐项记录结果；存在异常时自动关联一张维修工单。', admin() ? button('生成到期任务', 'generate', '', true) : '') +
-      `<section class="panel"><div class="filters"><select id="task-filter" aria-label="任务状态筛选"><option value="pending" ${taskFilter === 'pending' ? 'selected' : ''}>待执行任务</option><option value="completed" ${taskFilter === 'completed' ? 'selected' : ''}>已完成任务</option><option value="" ${taskFilter === '' ? 'selected' : ''}>全部任务</option></select><span class="filter-note">计划与日期去重 · 上海时区</span></div>${taskLines(snapshot.tasks.filter(item => !taskFilter || item.status === taskFilter))}</section>`;
-  } else if (currentView === 'plans') {
-    html = head('基于日期的周期计划，生成任务后保留检查项快照。', admin() ? button('＋ 新建计划', 'new-plan', '', true) + button('生成到期任务', 'generate') : '') +
-      `<section class="panel"><div class="table-scroll"><table><thead><tr><th>计划名称</th><th>设备</th><th>周期</th><th>下次到期</th><th>执行人</th><th>状态</th><th></th></tr></thead><tbody>${snapshot.plans.map(plan => `<tr><td><div class="cell-main">${e(plan.name)}</div><div class="cell-sub">${plan.type === 'maintenance' ? '保养' : '点检'} · ${plan.checklist.length} 项标准</div></td><td>${e(device(plan.deviceId)?.name)}</td><td>${plan.intervalDays} 天</td><td>${e(plan.nextDueDate)}</td><td>${e(person(plan.assigneeId))}</td><td>${plan.active ? badge('active') : badge('cancelled').replace('已取消', '已暂停')}</td><td>${admin() ? `<button class="text-button" data-action="toggle-plan" data-id="${e(plan.id)}">${plan.active ? '暂停' : '恢复'}</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7">暂无计划</td></tr>'}</tbody></table></div></section>`;
-  } else {
-    html = head('实际实现与预留接口使用同一份契约注册表。', '<a class="button" href="docs/api" target="_blank" rel="noopener">完整 API 说明 ↗</a>') +
-      `<div class="demo-strip"><strong>${capabilities.implemented.length} 个可用接口</strong><span>${capabilities.reserved.length} 个预留接口明确返回 HTTP 501，不会返回虚假的业务成功。</span></div>` +
-      panel('预留能力与实现条件', `<div class="panel-body">${capabilities.reserved.map(item => `<details class="contract"><summary><span class="contract-summary-name">${e(item.name)}</span>${badge('reserved')}<code>${e(item.method)} ${e(item.path)}</code></summary><div class="contract-body"><p>${e(item.scope)}</p><h3>输入草案</h3><pre>${e(JSON.stringify(item.request, null, 2))}</pre><h3>目标返回</h3><code>${e(item.response)}</code><h3>前置依赖</h3><ul>${item.dependencies.map(value => `<li>${e(value)}</li>`).join('')}</ul><h3>验收条件</h3><ul>${item.acceptance.map(value => `<li>${e(value)}</li>`).join('')}</ul><button class="button" data-action="try-reserved" data-id="${e(item.id)}">验证未实现响应</button></div></details>`).join('')}</div>`);
-  }
-  $('#content').innerHTML = html;
+  $('#content').innerHTML = renderView({
+    snapshot, capabilities, currentView, admin: admin(),
+    orderFilter, taskFilter, deviceSearch, orderSearch, e, when,
+  });
 }
-function deviceTable() {
-  const q = deviceSearch.toLowerCase();
-  const devices = snapshot.devices.filter(item => `${item.code} ${item.name} ${item.location}`.toLowerCase().includes(q));
-  if (!devices.length) return '<div class="empty">没有找到设备</div>';
-  return `<div class="table-scroll"><table><thead><tr><th>设备</th><th>位置</th><th>分类</th><th>业务状态</th><th>操作</th></tr></thead><tbody>${devices.map(item => `<tr><td><div class="cell-main">${e(item.name)}</div><div class="cell-sub">${e(item.code)}</div></td><td>${e(item.location)}</td><td>${e(item.category)}</td><td>${badge(item.derivedStatus)}</td><td><button class="text-button" data-action="device" data-id="${e(item.id)}">履历</button><button class="text-button" data-action="scan" data-id="${e(item.id)}">模拟扫码报修 →</button></td></tr>`).join('')}</tbody></table></div>`;
-}
+function deviceTable() { return renderDeviceCards(snapshot, deviceSearch, e); }
 function openDialog(title, html) {
   $('#dialog-title').textContent = title;
   $('#dialog-body').innerHTML = html;
@@ -168,6 +135,8 @@ function taskDetail(id) {
 }
 async function action(name, id, buttonElement) {
   if (name === 'close') return $('#dialog').close();
+  if (name === 'filter-order') { orderFilter = id; orderSearch = ''; render(); return; }
+  if (name === 'filter-task') { taskFilter = id; render(); return; }
   if (name === 'new-order' || name === 'scan') return newOrderForm(id);
   if (name === 'order') return orderDetail(id);
   if (name === 'task') return taskDetail(id);
@@ -221,11 +190,16 @@ document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
   if (target) action(target.dataset.action, target.dataset.id, target).catch(async error => { toast(error.message, true); if (error.code === 'VERSION_CONFLICT') { await load(); render(); } });
 });
-document.addEventListener('change', event => {
-  if (event.target.id === 'order-filter') { orderFilter = event.target.value; render(); }
-  if (event.target.id === 'task-filter') { taskFilter = event.target.value; render(); }
+document.addEventListener('input', event => {
+  if (event.target.id === 'device-search') { deviceSearch = event.target.value; $('#device-table').innerHTML = deviceTable(); }
+  if (event.target.id === 'order-search') {
+    orderSearch = event.target.value;
+    const q = orderSearch.trim().toLowerCase();
+    const results = snapshot.orders.filter(item => (!orderFilter || item.status === orderFilter) &&
+      `${item.number} ${item.title} ${device(item.deviceId)?.name || ''}`.toLowerCase().includes(q));
+    $('#order-results').innerHTML = renderOrderRows(snapshot, results, e);
+  }
 });
-document.addEventListener('input', event => { if (event.target.id === 'device-search') { deviceSearch = event.target.value; $('#device-table').innerHTML = deviceTable(); } });
 $('#close-dialog').addEventListener('click', () => $('#dialog').close());
 $('#messages-button').addEventListener('click', showMessages);
 $('#actor').addEventListener('change', async event => {
