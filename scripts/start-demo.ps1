@@ -19,6 +19,17 @@ function Get-DemoHealth {
     return $null
 }
 
+function Test-DeployedFrontend {
+    foreach ($taskAsset in @('index.html', 'app.js', 'styles.css', 'quiet-view.js')) {
+        try {
+            $taskLocal = [System.IO.File]::ReadAllBytes((Join-Path $taskRoot "public/$taskAsset"))
+            $taskRemote = (Invoke-WebRequest -UseBasicParsing -Uri ($taskUrl + $taskAsset) -Headers @{ 'Cache-Control' = 'no-cache' } -TimeoutSec 2).RawContentStream.ToArray()
+            if ([Convert]::ToBase64String($taskLocal) -ne [Convert]::ToBase64String($taskRemote)) { return $false }
+        } catch { return $false }
+    }
+    return $true
+}
+
 try {
     if (-not (Test-Path -LiteralPath (Join-Path $taskTomcat 'bin/catalina.bat'))) {
         throw 'Tomcat 11 installation was not found at the configured location.'
@@ -38,8 +49,12 @@ try {
         throw 'Maven package failed. See the build output above.'
     }
 
-    Copy-Item -LiteralPath $taskWar -Destination $taskDeployedWar -Force
     $taskExistingListener = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
+    if ($taskExistingListener -and -not (Get-DemoHealth)) {
+        throw 'Port 8080 is already in use without the /equipment-maintenance-demo app. Stop the other server (including an IDEA Tomcat run at /) and retry.'
+    }
+
+    Copy-Item -LiteralPath $taskWar -Destination $taskDeployedWar -Force
     $taskStartedTomcat = -not [bool]$taskExistingListener
     if ($taskStartedTomcat) {
         Start-Process -FilePath (Join-Path $taskTomcat 'bin/catalina.bat') -ArgumentList 'run' -WorkingDirectory (Join-Path $taskTomcat 'bin') -WindowStyle Hidden | Out-Null
@@ -47,13 +62,13 @@ try {
 
     $taskReady = $false
     for ($taskAttempt = 0; $taskAttempt -lt 60; $taskAttempt++) {
-        if (Get-DemoHealth) {
+        if ((Get-DemoHealth) -and (Test-DeployedFrontend)) {
             $taskReady = $true
             break
         }
         Start-Sleep -Milliseconds 500
     }
-    if (-not $taskReady) { throw 'The Java demo did not become ready in Tomcat. Check Tomcat logs.' }
+    if (-not $taskReady) { throw 'The Java demo or its current frontend did not become ready in Tomcat. Check Tomcat logs.' }
 
     if ($taskStartedTomcat) {
         $taskOwner = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction Stop | Select-Object -First 1

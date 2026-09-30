@@ -7,6 +7,7 @@
 ## 通用约定
 
 - 演示 WAR 在本机 Tomcat 11 的示例地址为 `http://127.0.0.1:8080/equipment-maintenance-demo/`，应用内 API 前缀 `/api`，写入请求采用 `Content-Type: application/json`，请求体上限 512 KiB。
+- 本机过滤器同时检查连接来源与 HTTP `Host`：只接受回环来源，且域名须为 `localhost`、`127.0.0.1` 或 `[::1]`。不满足时会在进入 API Servlet 前返回 HTTP 403，因此响应是 Tomcat 错误页而非上述 JSON 错误结构。
 - 演示角色通过 `X-Demo-Actor: admin|operator|technician|inspector` 传入。它是**可伪造的演示选择器**，不是账号认证、授权、企业数据隔离或上线安全机制。写入请求必须传入有效值。
 - 成功响应为 `{ "data": ... }`。失败响应为 `{ "error": { "code": "...", "message": "...", "details": null } }`。预留接口固定返回 `501 NOT_IMPLEMENTED`，`details` 还包含能力 ID、输入草案、依赖与验收要求。
 - 新增设备、工单、计划返回 HTTP 201；其他已实现成功操作返回 200。未知路由返回 404，状态或版本不匹配返回 409。

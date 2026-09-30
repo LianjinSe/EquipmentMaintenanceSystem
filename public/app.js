@@ -167,6 +167,7 @@ async function action(name, id, buttonElement) {
       await load(); render(); orderDetail(id); toast(name === 'assign' ? '已派单' : '已接单');
     } else if (name === 'generate') {
       const result = await api('/api/plans/generate', 'POST', { throughDate: snapshot.summary.today });
+      taskFilter = 'pending';
       await load(); render(); toast(`生成 ${result.count} 项到期任务；重复生成不会重复派发`);
     } else if (name === 'toggle-plan') {
       const plan = snapshot.plans.find(item => item.id === id);

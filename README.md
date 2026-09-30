@@ -12,7 +12,7 @@
 
 **http://127.0.0.1:8080/equipment-maintenance-demo/**
 
-此 WAR 的访问过滤器仅接受本机回环地址；即使共享 Tomcat 的 8080 端口监听其他网卡，也不能从其他机器操作这个未认证的演示应用。过滤器只作用于本应用上下文，不影响 Tomcat 的其他应用。
+此 WAR 的访问过滤器仅接受本机回环地址，并要求请求域名为 `localhost`、`127.0.0.1` 或 `[::1]`；即使共享 Tomcat 的 8080 端口监听其他网卡，也不能从其他机器或借助其他域名操作这个未认证的演示应用。静态页面不缓存，以免浏览器继续展示旧版。过滤器只作用于本应用上下文，不影响 Tomcat 的其他应用。
 
 双击 [停止演示.cmd](停止演示.cmd) 只会关闭**由该启动入口启动**的 Tomcat。如果 Tomcat 原本由 IDEA、Windows 服务或你自己启动，停止入口不会关闭它。Tomcat 是同一台机器上的共享应用服务器；若由启动入口启动，停止 Tomcat 也会停止这台实例承载的其他应用。WAR 部署在 `E:\Program Files\Apache Software Foundation\Tomcat 11.0\webapps\equipment-maintenance-demo.war`，不会覆盖现有的 `ROOT` 应用。
 
@@ -24,6 +24,8 @@
 2. 在 Maven 工具窗口执行 `test` 与 `package`。生成的 WAR 位于 `target/equipment-maintenance-demo.war`。
 3. 在 IDEA 配置本机 Tomcat 11，部署 WAR 或 WAR exploded，应用上下文设为 `/equipment-maintenance-demo`；也可直接运行 `启动演示.cmd` 完成构建和部署。
 4. 打开上面的应用地址。API 在同一上下文下的 `/api/*`，例如 `/equipment-maintenance-demo/api/health`。
+
+若 IDEA 的现有运行配置把应用上下文设为 `/`，它会把页面部署到 `http://127.0.0.1:8080/`；这与一键入口使用的 `/equipment-maintenance-demo/` 是两个地址。建议在 **Run/Debug Configurations → Tomcat → Deployment → Application context** 统一设为 `/equipment-maintenance-demo`。一键入口在 8080 已被其他应用占用且未提供此上下文时会明确报错；若 Tomcat 正在运行，它会等新 WAR 的四份前端文件实际可用后再打开页面。
 
 在终端使用 IDEA 内置 Maven 的命令示例：
 
