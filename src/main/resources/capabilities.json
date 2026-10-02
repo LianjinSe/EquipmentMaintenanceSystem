@@ -333,17 +333,236 @@
       "request": null,
       "response": "AuditEvent[]",
       "rule": "仅管理员；记录业务动作而非所有读写、登录或修改前后镜像；未防篡改。"
-    }
-  ],
-  "reserved": [
+    },
+    {
+      "method": "GET",
+      "path": "/api/catalog",
+      "name": "本地主数据查询",
+      "handler": "feature:catalog",
+      "implemented": true,
+      "request": null,
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/catalog/{id}",
+      "name": "创建本地主数据",
+      "handler": "feature:catalogCreate",
+      "implemented": true,
+      "request": {
+        "name": "示例；字段见扩展说明"
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{id}",
+      "name": "查询本人或管理员功能记录",
+      "handler": "feature:records",
+      "implemented": true,
+      "request": null,
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/accounts/{id}",
+      "name": "启用停用本地账号",
+      "handler": "feature:account",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "active": false
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/password",
+      "name": "修改本人密码",
+      "handler": "feature:password",
+      "implemented": true,
+      "request": {
+        "currentPassword": "<当前密码>",
+        "newPassword": "<12字符以上新密码>"
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "name": "撤销本人会话",
+      "handler": "feature:logout",
+      "implemented": true,
+      "request": {},
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/lifecycle/{id}/decision",
+      "name": "审批资产申请",
+      "handler": "feature:lifecycleDecision",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "decision": "approve",
+        "note": "本地批准"
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/procurement/{id}/action",
+      "name": "采购审批收货",
+      "handler": "feature:procurementAction",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "action": "approve"
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/files/{id}/content",
+      "name": "实际二进制上传",
+      "handler": "fileUpload",
+      "implemented": true,
+      "request": "<原始文件字节；Content-Type须与申请一致>",
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "GET",
+      "path": "/api/files/{id}/content",
+      "name": "授权下载原始文件",
+      "handler": "fileDownload",
+      "implemented": true,
+      "request": null,
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/devices/{id}/position",
+      "name": "配置设备位置范围",
+      "handler": "feature:devicePosition",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "latitude": 31.2,
+        "longitude": 121.4,
+        "radiusMeters": 50
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ocr/{id}/confirm",
+      "name": "确认人工读数",
+      "handler": "feature:ocrConfirm",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "value": 1.2,
+        "unit": "bar"
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tools/loans/{id}/return",
+      "name": "归还工具",
+      "handler": "feature:toolReturn",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "note": "已归还"
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/collaboration/rooms/{id}/messages",
+      "name": "发送本地协作文字",
+      "handler": "feature:roomMessage",
+      "implemented": true,
+      "request": {
+        "message": "本地消息"
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "GET",
+      "path": "/api/collaboration/rooms/{id}/messages",
+      "name": "查询房间消息",
+      "handler": "feature:roomMessages",
+      "implemented": true,
+      "request": null,
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/training/enrollments/{id}/complete",
+      "name": "提交本地课程考试",
+      "handler": "feature:trainingComplete",
+      "implemented": true,
+      "request": {
+        "version": 1,
+        "answers": {
+          "q1": "yes"
+        }
+      },
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
+    {
+      "method": "POST",
+      "path": "/api/labels/{id}/revoke",
+      "name": "作废标签",
+      "handler": "feature:labelRevoke",
+      "implemented": true,
+      "request": {},
+      "response": "业务记录/文件，见扩展说明",
+      "rule": "需要Bearer令牌；管理写入还需要管理员身份",
+      "implementationLevel": "local_support"
+    },
     {
       "id": "AUTH",
       "name": "真实账号与认证",
       "method": "POST",
       "path": "/api/auth/login",
       "request": {
-        "account": "<账号>",
-        "credential": "<密码或授权票据>",
+        "account": "admin",
+        "credential": "<读取本机首次凭据文件>",
         "provider": "password"
       },
       "response": "{ token, expiresAt, user }",
@@ -356,8 +575,15 @@
         "错误凭据及过期会话被拒绝",
         "停用账号不能继续调用接口，登录行为可审计"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:AUTH",
+      "implementationLevel": "local_partial",
+      "localScope": "本地密码登录、8小时令牌、账号停用、密码修改与会话撤销",
+      "limitations": [
+        "SSO、验证码、注册、实名认证及登录设备/IP管理尚未接入；旧界面的 X-Demo-Actor 仍为演示兼容入口，不等于真实身份认证。"
+      ],
+      "rule": "本地密码登录、8小时令牌、账号停用、密码修改与会话撤销；SSO、验证码、注册、实名认证及登录设备/IP管理尚未接入；旧界面的 X-Demo-Actor 仍为演示兼容入口，不等于真实身份认证。"
     },
     {
       "id": "ACCESS",
@@ -384,8 +610,15 @@
         "扫码、导出、附件、分享都服从权限",
         "不同部门/企业/外协越权请求返回 403，变更可追溯"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:ACCESS",
+      "implementationLevel": "local_partial",
+      "localScope": "固定本地账号的功能权限和设备部门范围配置、版本与审计",
+      "limitations": [
+        "菜单与字段配置仅保存元数据；没有供应商/企业租户隔离，旧演示路由未迁移到新权限模型。"
+      ],
+      "rule": "固定本地账号的功能权限和设备部门范围配置、版本与审计；菜单与字段配置仅保存元数据；没有供应商/企业租户隔离，旧演示路由未迁移到新权限模型。"
     },
     {
       "id": "SETTINGS",
@@ -408,8 +641,15 @@
         "配置修改不破坏历史记录",
         "非法字段/规则被拒绝，配置有版本和审批记录"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:SETTINGS",
+      "implementationLevel": "local_partial",
+      "localScope": "版本化字典、消息模板及安全类型的表单元数据保存",
+      "limitations": [
+        "配置审批、动态前端表单和规则表达式执行未实现。"
+      ],
+      "rule": "版本化字典、消息模板及安全类型的表单元数据保存；配置审批、动态前端表单和规则表达式执行未实现。"
     },
     {
       "id": "ASSET",
@@ -433,8 +673,15 @@
         "导入有错误行报告和回滚边界",
         "审批前后状态正确，履历保留前后值，报废设备不生成新任务"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:ASSET",
+      "implementationLevel": "local_partial",
+      "localScope": "调拨、停用、恢复、报废申请及审批；版本冲突、前后值、停用计划",
+      "limitations": [
+        "财务折旧、Excel导入、借用和复杂审批链未实现；报废前必须结清未完成业务。"
+      ],
+      "rule": "调拨、停用、恢复、报废申请及审批；版本冲突、前后值、停用计划；财务折旧、Excel导入、借用和复杂审批链未实现；报废前必须结清未完成业务。"
     },
     {
       "id": "COMPLIANCE",
@@ -457,8 +704,15 @@
         "适用期限及资质限制正确",
         "过期/不合格的处置流程和证据可追溯"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:COMPLIANCE",
+      "implementationLevel": "local_partial",
+      "localScope": "本地证书/批准标准关联、有效期校验、检查计划和站内提醒记录",
+      "limitations": [
+        "不推断法规，不替代合格机构检验；提前提醒记录尚无后台定时发送器。"
+      ],
+      "rule": "本地证书/批准标准关联、有效期校验、检查计划和站内提醒记录；不推断法规，不替代合格机构检验；提前提醒记录尚无后台定时发送器。"
     },
     {
       "id": "BOM",
@@ -485,8 +739,15 @@
         "环路与重复关系被拒绝",
         "变更保留版本，领料可按适用 BOM 查件"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:BOM",
+      "implementationLevel": "local_partial",
+      "localScope": "版本化父子设备与备件关系；拒绝重复、自引用和跨设备环路",
+      "limitations": [
+        "替代件生效规则、复杂单位换算及前端树图未实现。"
+      ],
+      "rule": "版本化父子设备与备件关系；拒绝重复、自引用和跨设备环路；替代件生效规则、复杂单位换算及前端树图未实现。"
     },
     {
       "id": "IOT",
@@ -511,8 +772,15 @@
         "重复与乱序数据处理可验证",
         "告警抑制/恢复准确，自动工单不重复，物理状态与业务状态区分"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:IOT",
+      "implementationLevel": "local_partial",
+      "localScope": "遥测去重、乱序识别、温度/振动阈值、告警抑制/恢复和关联工单",
+      "limitations": [
+        "通过HTTP输入本地点位；没有网关接入、数据源签名或传感器可信采集。"
+      ],
+      "rule": "遥测去重、乱序识别、温度/振动阈值、告警抑制/恢复和关联工单；通过HTTP输入本地点位；没有网关接入、数据源签名或传感器可信采集。"
     },
     {
       "id": "SCHEDULE",
@@ -526,7 +794,7 @@
           "to": "<日期>"
         },
         "triggers": [
-          "runtime"
+          "calendar"
         ],
         "resourceIds": []
       },
@@ -540,8 +808,15 @@
         "跨时区/周期边界与重试不重复",
         "排程冲突可解释，暂停/变更对既有任务的影响明确"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:SCHEDULE",
+      "implementationLevel": "local_partial",
+      "localScope": "90天内日期计划预览、资源筛选与同日冲突解释",
+      "limitations": [
+        "运行时长、产量触发没有数据时仅报告缺项；不执行自动调度或甘特图。"
+      ],
+      "rule": "90天内日期计划预览、资源筛选与同日冲突解释；运行时长、产量触发没有数据时仅报告缺项；不执行自动调度或甘特图。"
     },
     {
       "id": "WORKFLOW",
@@ -549,11 +824,24 @@
       "method": "POST",
       "path": "/api/workflows/definitions",
       "request": {
-        "name": "<流程>",
+        "name": "本地流程定义",
         "version": 1,
-        "nodes": [],
+        "nodes": [
+          {
+            "id": "start",
+            "kind": "start",
+            "next": [
+              "end"
+            ]
+          },
+          {
+            "id": "end",
+            "kind": "end",
+            "next": []
+          }
+        ],
         "rules": {
-          "assignment": "skill",
+          "assignment": "manual",
           "timeoutMinutes": 60
         }
       },
@@ -567,8 +855,15 @@
         "并发抢单唯一成功，非法流转失败",
         "超时边界及审批委托可验证，流程修改不破坏在途单据"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:WORKFLOW",
+      "implementationLevel": "local_partial",
+      "localScope": "有向无环流程定义校验和不可变版本存储",
+      "limitations": [
+        "定义只保存，不替代维修状态机；技能自动派单、抢单和SLA计时未运行。"
+      ],
+      "rule": "有向无环流程定义校验和不可变版本存储；定义只保存，不替代维修状态机；技能自动派单、抢单和SLA计时未运行。"
     },
     {
       "id": "COST",
@@ -599,8 +894,15 @@
         "指标能逐项回查原始数据",
         "缺少运行/生产数据时明确不可计算，不返回伪造的零值"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:COST",
+      "implementationLevel": "local_partial",
+      "localScope": "从完工记录计算分钟MTTR；有输入才计算MTBF/OEE，缺项返回null",
+      "limitations": [
+        "不是正式费用/财务/绩效口径；MTTR以完工尝试为单位，维度聚合尚未实现。"
+      ],
+      "rule": "从完工记录计算分钟MTTR；有输入才计算MTBF/OEE，缺项返回null；不是正式费用/财务/绩效口径；MTTR以完工尝试为单位，维度聚合尚未实现。"
     },
     {
       "id": "KNOWLEDGE",
@@ -623,8 +925,15 @@
         "检索结果有来源及适用范围",
         "受限资料不可泄露；推荐错误或无证据时有明确处理路径"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:KNOWLEDGE",
+      "implementationLevel": "local_partial",
+      "localScope": "审核知识的关键词和设备型号检索；保留来源",
+      "limitations": [
+        "没有向量搜索、自动AI推荐或企业知识权限分级。"
+      ],
+      "rule": "审核知识的关键词和设备型号检索；保留来源；没有向量搜索、自动AI推荐或企业知识权限分级。"
     },
     {
       "id": "INVENTORY",
@@ -654,8 +963,15 @@
         "同一请求只入账一次，库存与流水可对账",
         "不足库存与并发领料正确处理，退料不重复增加库存"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:INVENTORY",
+      "implementationLevel": "local_partial",
+      "localScope": "小数数量库存、领料/退料/收货、幂等请求、单位及不足库存校验",
+      "limitations": [
+        "单进程JSON事务；不支持多Tomcat实例并发、成本计价或完整盘点。"
+      ],
+      "rule": "小数数量库存、领料/退料/收货、幂等请求、单位及不足库存校验；单进程JSON事务；不支持多Tomcat实例并发、成本计价或完整盘点。"
     },
     {
       "id": "PROCUREMENT",
@@ -683,8 +999,15 @@
         "申请、收货、库存、结算可对账",
         "供应商仅能查看本方单据，重复同步不重复入账"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:PROCUREMENT",
+      "implementationLevel": "local_partial",
+      "localScope": "本地供应商/有效合同校验、申请、批准、收货与库存流水",
+      "limitations": [
+        "没有ERP、发票、付款、税务或外部供应商账号。"
+      ],
+      "rule": "本地供应商/有效合同校验、申请、批准、收货与库存流水；没有ERP、发票、付款、税务或外部供应商账号。"
     },
     {
       "id": "REPORT",
@@ -692,10 +1015,10 @@
       "method": "POST",
       "path": "/api/reports/export",
       "request": {
-        "reportType": "<类型>",
+        "reportType": "orders",
         "filters": {},
-        "format": "pdf",
-        "templateId": "<ID>"
+        "format": "csv",
+        "templateId": "local"
       },
       "response": "{ jobId, status, downloadUrl, expiresAt }",
       "scope": "标准报表、可视化图表、大屏、自定义报表、BI 钻取、定时生成、PDF/Excel/打印模板。",
@@ -707,8 +1030,15 @@
         "导出与页面查询口径一致且无越权字段",
         "大数据异步导出可取消，模板及打印结果人工验收"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:REPORT",
+      "implementationLevel": "local_partial",
+      "localScope": "管理员按过滤条件生成实际CSV文件并通过授权接口下载",
+      "limitations": [
+        "PDF、打印模板和大数据异步取消未配置，请求PDF返回422。"
+      ],
+      "rule": "管理员按过滤条件生成实际CSV文件并通过授权接口下载；PDF、打印模板和大数据异步取消未配置，请求PDF返回422。"
     },
     {
       "id": "INTEGRATION",
@@ -732,8 +1062,15 @@
         "失败重试及重复请求不重复建账",
         "双边可对账，失败记录可定位并按授权补偿"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:INTEGRATION",
+      "implementationLevel": "local_partial",
+      "localScope": "local/equipment/import 批量原子导入及请求去重；外部任务明确阻塞",
+      "limitations": [
+        "ERP/OA/MES/HR未配置，返回503 PROVIDER_NOT_CONFIGURED，没有同步成功声明。"
+      ],
+      "rule": "local/equipment/import 批量原子导入及请求去重；外部任务明确阻塞；ERP/OA/MES/HR未配置，返回503 PROVIDER_NOT_CONFIGURED，没有同步成功声明。"
     },
     {
       "id": "OUTSOURCE",
@@ -756,8 +1093,15 @@
         "外协仅操作所属任务",
         "内外工单状态一致且报价、发票、验收记录可关联"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:OUTSOURCE",
+      "implementationLevel": "local_partial",
+      "localScope": "有效合同和工单的本地委外登记，拒绝重复活动登记",
+      "limitations": [
+        "外部派送、供应商身份、报价付款和内外状态回传未配置。"
+      ],
+      "rule": "有效合同和工单的本地委外登记，拒绝重复活动登记；外部派送、供应商身份、报价付款和内外状态回传未配置。"
     },
     {
       "id": "FILE",
@@ -781,8 +1125,15 @@
         "越权上传/下载失败",
         "伪造类型、大文件、重复与中断上传可验证，附件随数据恢复"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:FILE",
+      "implementationLevel": "local_partial",
+      "localScope": "两步实际字节上传、大小/类型/图片内容校验、摘要与授权下载",
+      "limitations": [
+        "文件为本机存储；没有断点续传、病毒扫描和企业保留期策略。"
+      ],
+      "rule": "两步实际字节上传、大小/类型/图片内容校验、摘要与授权下载；文件为本机存储；没有断点续传、病毒扫描和企业保留期策略。"
     },
     {
       "id": "LABEL",
@@ -805,8 +1156,15 @@
         "标签可实物扫码并找到正确设备",
         "分享/标签不能绕过身份与数据权限，作废标签失效"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:LABEL",
+      "implementationLevel": "local_partial",
+      "localScope": "ZXing生成真实QR SVG、标签撤销、设备关联和授权下载",
+      "limitations": [
+        "QR载荷用于本地设备/标签识别；没有移动端扫码页面、打印机、NFC/RFID写入器。"
+      ],
+      "rule": "ZXing生成真实QR SVG、标签撤销、设备关联和授权下载；QR载荷用于本地设备/标签识别；没有移动端扫码页面、打印机、NFC/RFID写入器。"
     },
     {
       "id": "MOBILE",
@@ -828,8 +1186,15 @@
         "在批准的机型、系统、平台版本验收",
         "平台授权和深链打开正常，低版本及权限拒绝有处理路径"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:MOBILE",
+      "implementationLevel": "local_partial",
+      "localScope": "已认证web端会话与角色能力返回；平台任务明确阻塞",
+      "limitations": [
+        "微信/支付宝/native授权服务未配置，返回503；无小程序或原生应用。"
+      ],
+      "rule": "已认证web端会话与角色能力返回；平台任务明确阻塞；微信/支付宝/native授权服务未配置，返回503；无小程序或原生应用。"
     },
     {
       "id": "OFFLINE",
@@ -857,8 +1222,15 @@
         "重连后数据与附件无重复和遗漏",
         "并发冲突、退出登录及撤权后离线数据处理可验证"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:OFFLINE",
+      "implementationLevel": "local_partial",
+      "localScope": "限定业务操作的幂等同步、账号绑定和版本冲突列表",
+      "limitations": [
+        "没有离线客户端、附件队列、端侧加密或断网实测；本项目现场无需离线。"
+      ],
+      "rule": "限定业务操作的幂等同步、账号绑定和版本冲突列表；没有离线客户端、附件队列、端侧加密或断网实测；本项目现场无需离线。"
     },
     {
       "id": "SOP",
@@ -886,8 +1258,15 @@
         "未完成必需步骤不能完工",
         "标准版本与每步证据保留；软件记录的责任边界确认"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:SOP",
+      "implementationLevel": "local_partial",
+      "localScope": "按模板顺序、证据要求保存检查步骤；未完成SOP阻止任务完工",
+      "limitations": [
+        "本地模板为示例，尚未经业务/安全负责人批准，不能当现场安全证明。"
+      ],
+      "rule": "按模板顺序、证据要求保存检查步骤；未完成SOP阻止任务完工；本地模板为示例，尚未经业务/安全负责人批准，不能当现场安全证明。"
     },
     {
       "id": "SIGN",
@@ -912,8 +1291,15 @@
         "签署对应的单据版本可证明且不可被后改冒用",
         "签署拒绝、撤回、归档及权限有验收记录"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:SIGN",
+      "implementationLevel": "local_partial",
+      "localScope": "本地账号对明确单据版本留痕、SHA256摘要/HMAC与不可变附件",
+      "limitations": [
+        "仅本地留痕，不是有法律效力的第三方电子签章；外部provider返回503。"
+      ],
+      "rule": "本地账号对明确单据版本留痕、SHA256摘要/HMAC与不可变附件；仅本地留痕，不是有法律效力的第三方电子签章；外部provider返回503。"
     },
     {
       "id": "LOCATION",
@@ -939,8 +1325,15 @@
         "定位拒绝及低精度有处理路径",
         "实地到位判断可验收，轨迹仅授权人员可见"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:LOCATION",
+      "implementationLevel": "local_partial",
+      "localScope": "设备坐标/范围配置、任务/标签匹配和距离+精度计算",
+      "limitations": [
+        "坐标为客户端自报，physicalLocationVerified=false；无硬件防伪或实地到位证明。"
+      ],
+      "rule": "设备坐标/范围配置、任务/标签匹配和距离+精度计算；坐标为客户端自报，physicalLocationVerified=false；无硬件防伪或实地到位证明。"
     },
     {
       "id": "OCR",
@@ -963,8 +1356,15 @@
         "在批准样本上达到业务确定的误差范围",
         "低置信度转人工，原图与最终确认读数关联"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:OCR",
+      "implementationLevel": "local_partial",
+      "localScope": "图片与检查项关联、人工确认待办、可审计人工读数确认",
+      "limitations": [
+        "没有OCR引擎；初次返回202 manual_required、value/confidence=null，绝不伪造识别结果。"
+      ],
+      "rule": "图片与检查项关联、人工确认待办、可审计人工读数确认；没有OCR引擎；初次返回202 manual_required、value/confidence=null，绝不伪造识别结果。"
     },
     {
       "id": "TOOL",
@@ -987,8 +1387,15 @@
         "重复借出被拒绝，归还可核对",
         "过期校准工具不能按批准规则投入作业"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:TOOL",
+      "implementationLevel": "local_partial",
+      "localScope": "工具校准有效期、唯一借出、本人/管理员归还和记录",
+      "limitations": [
+        "没有智能柜、失效工具实物控制、自动逾期推送。"
+      ],
+      "rule": "工具校准有效期、唯一借出、本人/管理员归还和记录；没有智能柜、失效工具实物控制、自动逾期推送。"
     },
     {
       "id": "COLLAB",
@@ -998,7 +1405,7 @@
       "request": {
         "orderId": "<ID>",
         "participantIds": [],
-        "mode": "video"
+        "mode": "text"
       },
       "response": "{ roomId, joinUrl, expiresAt }",
       "scope": "工单评论/@、临时讨论组、视频/语音对讲、屏幕标注、专家技能库和人员联系。",
@@ -1010,8 +1417,15 @@
         "非参与者不能加入或读记录",
         "网络中断可恢复，协作内容与工单关联"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:COLLAB",
+      "implementationLevel": "local_partial",
+      "localScope": "有成员边界和到期时间的本地文字协作房间/消息",
+      "limitations": [
+        "视频服务未配置，video请求503；尚无聊天前端、实时WebSocket及录制。"
+      ],
+      "rule": "有成员边界和到期时间的本地文字协作房间/消息；视频服务未配置，video请求503；尚无聊天前端、实时WebSocket及录制。"
     },
     {
       "id": "AR3D",
@@ -1034,8 +1448,15 @@
         "模型与实物版本匹配",
         "目标机型可加载，步骤位置和部件标识经现场确认"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:AR3D",
+      "implementationLevel": "local_partial",
+      "localScope": "已上传内嵌glTF2.0资产与设备/部件/说明的授权查询",
+      "limitations": [
+        "需要用户上传合法模型；无AR渲染、硬件定位或实物版本验收。"
+      ],
+      "rule": "已上传内嵌glTF2.0资产与设备/部件/说明的授权查询；需要用户上传合法模型；无AR渲染、硬件定位或实物版本验收。"
     },
     {
       "id": "TRAINING",
@@ -1057,8 +1478,15 @@
         "学习考试与有效资质关联",
         "工资和评价可核对原始规则，敏感信息严格限制访问"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:TRAINING",
+      "implementationLevel": "local_partial",
+      "localScope": "报名、题目答案校验、成绩和本地课程有效期证书",
+      "limitations": [
+        "仅本地培训记录；无HR、工资、奖惩或外部资质核验。"
+      ],
+      "rule": "报名、题目答案校验、成绩和本地课程有效期证书；仅本地培训记录；无HR、工资、奖惩或外部资质核验。"
     },
     {
       "id": "AI",
@@ -1082,8 +1510,15 @@
         "输出附数据/模型来源及不确定性",
         "按批准指标验收，语音/AI 不能未经授权自动产生关键业务动作"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:AI",
+      "implementationLevel": "local_partial",
+      "localScope": "确定性阈值规则评估并返回输入证据；外部模型任务明确阻塞",
+      "limitations": [
+        "规则不是预测模型。prediction/twin/voice未配置时503，未经授权不执行关键动作。"
+      ],
+      "rule": "确定性阈值规则评估并返回输入证据；外部模型任务明确阻塞；规则不是预测模型。prediction/twin/voice未配置时503，未经授权不执行关键动作。"
     },
     {
       "id": "LOWCODE",
@@ -1107,8 +1542,15 @@
         "恶意配置和权限绕过被拒绝",
         "历史单据兼容，发布回滚和多语言格式可验证"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:LOWCODE",
+      "implementationLevel": "local_partial",
+      "localScope": "安全字段类型的表单/流程引用/语言元数据版本发布",
+      "limitations": [
+        "仅元数据；没有动态脚本执行、前端低代码渲染、完整发布回滚或翻译系统。"
+      ],
+      "rule": "安全字段类型的表单/流程引用/语言元数据版本发布；仅元数据；没有动态脚本执行、前端低代码渲染、完整发布回滚或翻译系统。"
     },
     {
       "id": "SECURITY",
@@ -1131,8 +1573,15 @@
         "密钥轮换、越权和审计完整性可验证",
         "恢复/回溯保留历史且经过授权，不能通过改本地文件冒充历史"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:SECURITY",
+      "implementationLevel": "local_partial",
+      "localScope": "按时间/实体导出真实审计记录及本地HMAC摘要",
+      "limitations": [
+        "只能证明导出内容未改，不能证明导出前本机管理员未改历史；无第三方存证。"
+      ],
+      "rule": "按时间/实体导出真实审计记录及本地HMAC摘要；只能证明导出内容未改，不能证明导出前本机管理员未改历史；无第三方存证。"
     },
     {
       "id": "BACKUP",
@@ -1154,8 +1603,15 @@
         "真实执行恢复演练并对账",
         "备份失败能告警，批准的恢复目标满足；导出 JSON 不算完整容灾"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:BACKUP",
+      "implementationLevel": "local_partial",
+      "localScope": "实际数据+附件ZIP清单、摘要/HMAC校验及显式确认恢复，撤销会话",
+      "limitations": [
+        "本机备份可恢复但不是异地灾备；恢复前须备份当前数据，不包含本机签名密钥迁移。"
+      ],
+      "rule": "实际数据+附件ZIP清单、摘要/HMAC校验及显式确认恢复，撤销会话；本机备份可恢复但不是异地灾备；恢复前须备份当前数据，不包含本机签名密钥迁移。"
     },
     {
       "id": "PUSH",
@@ -1166,7 +1622,7 @@
         "eventId": "<唯一事件>",
         "recipientIds": [],
         "channels": [
-          "wechat"
+          "in_app"
         ],
         "templateId": "<ID>",
         "variables": {}
@@ -1181,8 +1637,16 @@
         "发送失败及限流可追踪并补发",
         "关键待办不依赖单次推送成功，不能承诺无遗漏触达"
       ],
-      "implemented": false,
-      "status": "reserved"
+      "implemented": true,
+      "status": "reserved",
+      "handler": "feature:PUSH",
+      "implementationLevel": "local_partial",
+      "localScope": "站内消息事件去重、多个收件人和外部渠道逐项结果",
+      "limitations": [
+        "微信/短信/邮件未配置不发送；无自动重试器或到达回执，外部渠道返回明确失败。"
+      ],
+      "rule": "站内消息事件去重、多个收件人和外部渠道逐项结果；微信/短信/邮件未配置不发送；无自动重试器或到达回执，外部渠道返回明确失败。"
     }
-  ]
+  ],
+  "reserved": []
 }

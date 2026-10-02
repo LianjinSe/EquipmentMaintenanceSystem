@@ -128,14 +128,15 @@ function plansView(snapshot, admin, e) {
 }
 
 function capabilitiesView(capabilities, e) {
-  return pageHeader('INTERFACES / 能力边界', '完成了什么，<em>还有什么。</em>', '可用路由与预留能力分别标明；预留调用返回 501。',
+  const extensions = capabilities.implemented.filter(item => item.id);
+  return pageHeader('INTERFACES / 能力边界', '完成了什么，<em>还有什么。</em>', '新增能力已有本地后端；外部服务未配置时会明确返回失败。每项入口的局部实现和接续条件列在下面。',
     '<a class="button primary" href="docs/api" target="_blank" rel="noopener">完整 API 说明 ↗</a>') +
-    `<div class="quiet-capability-count"><strong>${capabilities.implemented.length}</strong><span>个可用路由</span><strong>${capabilities.reserved.length}</strong><span>个预留能力</span></div>
-    <section class="quiet-capabilities"><header><span>接口与进展</span><h2>预留能力与接续条件</h2></header>
-    ${capabilities.reserved.map(item => `<details class="contract"><summary><span class="contract-summary-name">${e(item.name)}</span><span class="quiet-state muted">预留</span><code>${e(item.method)} ${e(item.path)}</code></summary>
-    <div class="contract-body"><p>${e(item.scope)}</p><h3>输入草案</h3><pre>${e(JSON.stringify(item.request, null, 2))}</pre><h3>目标返回</h3><code>${e(item.response)}</code>
-    <h3>前置依赖</h3><ul>${item.dependencies.map(value => `<li>${e(value)}</li>`).join('')}</ul><h3>验收条件</h3><ul>${item.acceptance.map(value => `<li>${e(value)}</li>`).join('')}</ul>
-    <button class="button" type="button" data-action="try-reserved" data-id="${e(item.id)}">验证未实现响应</button></div></details>`).join('')}</section>`;
+    `<div class="quiet-capability-count"><strong>${capabilities.implemented.length}</strong><span>个后端路由</span><strong>${extensions.length}</strong><span>个本地扩展能力</span></div>
+    <section class="quiet-capabilities"><header><span>接口与进展</span><h2>本地实现与接续条件</h2></header>
+    <p class="dialog-description">新增API需要本地账号Bearer令牌；首次凭据位于数据文件旁，具体调用见API说明。现有前端仍使用演示角色。</p>
+    ${extensions.map(item => `<details class="contract"><summary><span class="contract-summary-name">${e(item.name)}</span><span class="quiet-state muted">本地切片</span><code>${e(item.method)} ${e(item.path)}</code></summary>
+    <div class="contract-body"><h3>当前本地实现</h3><p>${e(item.localScope)}</p><h3>仍需接续</h3><ul>${item.limitations.map(value => `<li>${e(value)}</li>`).join('')}</ul><h3>输入示例</h3><pre>${e(JSON.stringify(item.request, null, 2))}</pre><h3>目标返回</h3><code>${e(item.response)}</code>
+    <h3>原需求依赖</h3><ul>${item.dependencies.map(value => `<li>${e(value)}</li>`).join('')}</ul><h3>原目标验收条件</h3><ul>${item.acceptance.map(value => `<li>${e(value)}</li>`).join('')}</ul></div></details>`).join('')}</section>`;
 }
 
 export function renderView({ snapshot, capabilities, currentView, admin, orderFilter, taskFilter, deviceSearch, orderSearch, e, when }) {

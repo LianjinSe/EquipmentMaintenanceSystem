@@ -40,8 +40,11 @@ class ContractDocumentationTest {
             assertFalse(future.path("implemented").asBoolean(), "future route marked implemented: " + id);
             assertTrue(future.path("dependencies").size() > 0 && future.path("acceptance").size() > 0, "incomplete reservation: " + id);
         }
-        assertEquals(27, registry.path("implemented").size());
-        assertEquals(33, registry.path("reserved").size());
+        assertEquals(77, registry.path("implemented").size());
+        assertEquals(0, registry.path("reserved").size());
+        int extensions = 0;
+        for (JsonNode route : registry.path("implemented")) if (route.has("id")) extensions++;
+        assertEquals(33, extensions);
     }
 
     @Test

@@ -73,6 +73,7 @@ class DemoStoreTest {
     @Test
     void rolesAndVersionsBlockInvalidActions() throws IOException {
         DemoStore store = newStore();
+        assertEquals(401, assertThrows(DemoException.class, () -> store.mutate("createDevice", null, o(), null)).status);
         JsonNode order = read(store, "orders").get(0);
         String id = order.path("id").asText();
         assertEquals(403, assertThrows(DemoException.class, () -> mutation(store, "assignOrder", id,

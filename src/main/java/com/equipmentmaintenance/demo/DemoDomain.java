@@ -50,7 +50,7 @@ final class DemoDomain {
     }
 
     static ObjectNode actor(String id) {
-        String[] entry = ACTORS.get(id);
+        String[] entry = id == null ? null : ACTORS.get(id);
         if (entry == null) throw new DemoException(401, "DEMO_ACTOR_REQUIRED", "请通过 X-Demo-Actor 提供有效演示角色");
         return object("id", id, "name", entry[0], "role", entry[1], "department", entry[2]);
     }
@@ -226,6 +226,7 @@ final class DemoDomain {
                 fields(input, "deviceId", "title", "description", "priority");
                 String deviceId = text(input, "deviceId", "设备 ID", 80, false);
                 find(array(store, "devices"), deviceId, "设备");
+                if (Set.of("inactive", "scrapped").contains(find(array(store, "devices"), deviceId, "设备").path("lifecycleStatus").asText())) throw bad("设备已停用或报废");
                 return newOrder(store, deviceId, text(input, "title", "故障标题", 100, false),
                         text(input, "description", "故障描述", 1000, false),
                         choice(input, "priority", "优先级", "normal", "urgent"), actor, at, null);
@@ -269,6 +270,7 @@ final class DemoDomain {
                     case "completeOrder" -> {
                         executor(actor, assigneeId);
                         requireStatus(result, "in_progress");
+                        FeatureDomain.checkSop(store, "order", id);
                         if (!input.path("safetyConfirmed").isBoolean() || !input.path("safetyConfirmed").booleanValue()) {
                             throw new DemoException(400, "SAFETY_CONFIRMATION_REQUIRED", "请确认已完成演示中的现场安全检查");
                         }
@@ -323,6 +325,7 @@ final class DemoDomain {
                 fields(input, "deviceId", "name", "type", "intervalDays", "nextDueDate", "assigneeId", "checklist");
                 String deviceId = text(input, "deviceId", "设备 ID", 80, false);
                 find(array(store, "devices"), deviceId, "设备");
+                if (Set.of("inactive", "scrapped").contains(find(array(store, "devices"), deviceId, "设备").path("lifecycleStatus").asText())) throw bad("设备已停用或报废");
                 String target = text(input, "assigneeId", "执行人员", 80, false);
                 String targetRole = actor(target).path("role").asText();
                 if (!Set.of("technician", "inspector").contains(targetRole)) throw bad("计划必须指派给维修工或巡检员");
@@ -371,6 +374,7 @@ final class DemoDomain {
                 for (JsonNode rawPlan : array(store, "plans")) {
                     ObjectNode plan = (ObjectNode) rawPlan;
                     if (!plan.path("active").asBoolean()) continue;
+                    if (Set.of("inactive", "scrapped").contains(find(array(store, "devices"), plan.path("deviceId").asText(), "设备").path("lifecycleStatus").asText())) continue;
                     String due = plan.path("nextDueDate").asText();
                     while (due.compareTo(through) <= 0) {
                         boolean existing = false;
@@ -427,6 +431,7 @@ final class DemoDomain {
                 executor(actor, task.path("assigneeId").asText());
                 version(task, input);
                 requireStatus(task, "pending");
+                FeatureDomain.checkSop(store, "task", id);
                 JsonNode raw = input.get("results");
                 if (!(raw instanceof ArrayNode answers) || answers.size() != task.path("checklist").size()) {
                     throw bad("须提交全部检查项");

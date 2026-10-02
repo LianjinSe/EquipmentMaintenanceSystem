@@ -40,7 +40,26 @@
 
 首次部署会生成虚构的三台设备、一张待派工单和两项周期计划。默认 JSON 文件位于 **Tomcat 的 `data/equipment-maintenance-demo/demo.json`**，不在应用的 webapps 公开目录，也不会被 Git 提交。重启 Tomcat 后可继续使用同一演示数据；如果该文件损坏，应用会拒绝启动并保留原文件。
 
-可以通过 JVM 系统属性 `equipment.demo.data` 或环境变量 `EQUIPMENT_DEMO_DATA` 指定另一个数据文件路径，便于 IDEA 调试或使用全新演示数据。之前的本地 `data/demo.json` 原型文件不会被新部署自动覆盖或迁移；确需继续使用时，先核对并备份，再显式指定路径。当前 JSON 文件只服务于**单个 Tomcat 实例**，不提供数据库事务、多进程锁、备份或灾备。
+可以通过 JVM 系统属性 `equipment.demo.data` 或环境变量 `EQUIPMENT_DEMO_DATA` 指定另一个数据文件路径，便于 IDEA 调试或使用全新演示数据。当前 JSON 文件只服务于**单个应用实例**，不要让 IDEA 的 `/` 与脚本的命名上下文同时写同一数据文件；没有数据库事务或多进程锁。新增本机备份接口可恢复数据与附件，尚不属于异地灾备。
+
+## 本地后端扩展与接口验收
+
+原 33 个预留入口已增加本地 Java 处理器，加上辅助路由共 **77 条路由**。库存流水、采购审批收货、资产审批、BOM、文件上传下载、真实 QR SVG、工具借还、文字协作、培训、SOP、CSV 报表和本机备份恢复可以通过 API 操作。每项局部能力及剩余范围见 [本地后端扩展说明](docs/demo/本地后端扩展说明.md)。
+
+新增接口除登录外需要 `Authorization: Bearer <token>`。首次加载扩展时，在数据文件旁生成 `<数据文件名>.credentials.json`，含四个本地账号的随机初始密码；API 数据只保存 PBKDF2 密码哈希与令牌摘要。登录调用 `POST /api/auth/login`，输入 `account`、`credential`、`provider=password`。改密/注销/停用及恢复备份会撤销对应会话。初始凭据文件不会随改密自动更新。
+
+原演示页面仍兼容 `X-Demo-Actor`，所以目前不是全站企业认证系统。ERP、微信、视频、预测模型等没有接入配置时返回 **503 PROVIDER_NOT_CONFIGURED**；OCR 返回实际图片关联的人工确认待办，不伪造识别值；PDF/NFC 等未支持格式返回 422。新增能力没有全部配置前端操作页，主要通过 API 验收。
+
+标准 `mvn test` 执行 24 项单元/契约测试，真实 Tomcat 验收需要单独启用。先使用全新隔离数据文件启动 Tomcat，再运行下面的命令（以 IDEA 的 Maven 或 PATH 中的 `mvn` 执行）：
+
+```powershell
+$env:EQUIPMENT_DEMO_DATA = 'E:/ProgramData/IDEA/EquipmentMaintenanceSystem/target/backend-http/state.json'
+powershell -NoProfile -File scripts/start-demo.ps1 -NoBrowser
+mvn '-Dtest=LocalBackendHttpTest' '-Ddemo.test.baseUrl=http://127.0.0.1:8080/equipment-maintenance-demo/' '-Ddemo.test.credentials=E:/ProgramData/IDEA/EquipmentMaintenanceSystem/target/backend-http/state.json.credentials.json' test
+powershell -NoProfile -File scripts/stop-demo.ps1
+```
+
+HTTP 验收会创建数据和执行恢复，只用于**全新隔离文件**；再次验收请换一个文件路径。凭据、签名密钥、文件和备份放在 Git 忽略的目录或 Tomcat 私有数据目录，不提交仓库。
 
 ## 建议体验顺序
 
@@ -49,7 +68,7 @@
 3. 在“维保任务”用指派的巡检员逐项录入结果；任一项填写异常和说明后，任务与自动创建的维修工单关联。
 4. 管理员在“周期计划”新建计划、手动生成到期任务，重复生成不会为同一计划日期重复派发；暂停计划只影响后续生成。
 5. 在“设备台账”新增、搜索设备并查看业务履历；消息菜单可查看和标记站内消息已读。
-6. “接口与进展”列出 27 个实际路由和 33 个预留能力；预留接口实际返回 `501 NOT_IMPLEMENTED`。
+6. “接口与进展”列出 77 条路由与 33 项扩展的本地范围、外部依赖和原目标验收条件。
 
 ## 技术结构
 
@@ -60,6 +79,10 @@ src/main/java/com/equipmentmaintenance/demo/
   LocalOnlyFilter.java                        演示应用仅允许本机访问
   DemoDomain.java                            设备、工单、维保状态与规则
   DemoStore.java                             单机 JSON 保存与读取
+  FeatureDomain.java                         扩展路由、配置与主数据
+  FeatureBusiness.java                       资产、库存、遥测、排程与报表
+  FeatureWork.java                           SOP、协作、工具、培训与外部边界
+  FeatureAuth.java / FileVault.java           本地密码会话、文件与备份
   DemoException.java                         业务错误及 HTTP 状态
 src/main/resources/capabilities.json        已实现/预留接口注册表
 src/main/webapp/WEB-INF/web.xml              Servlet 与欢迎页映射
@@ -70,13 +93,13 @@ scripts/start-demo.ps1                       本机 Maven/Tomcat 启动入口
 scripts/stop-demo.ps1                        只停止启动入口拥有的 Tomcat
 ```
 
-写入 API 使用 JSON 与 `X-Demo-Actor` 演示角色。成功响应为 `{ "data": ... }`，错误响应为 `{ "error": { "code": "...", "message": "...", "details": null } }`。资源版本冲突返回 409；预留接口返回 501。完整输入、返回、规则和依赖见 [API 文档](docs/demo/API.md)。
+API 成功响应为 `{ "data": ... }`，错误响应为 `{ "error": { "code": "...", "message": "...", "details": null } }`。资源版本冲突返回 409；外部服务未配置返回 503。完整输入、返回、规则和依赖见 [API 文档](docs/demo/API.md)。
 
 ## 边界与文档
 
-- 账号切换只用于演示，没有真实认证、角色配置或企业数据隔离。
+- 旧页面角色切换只用于演示；扩展API有本地账号认证和局部权限，但没有全站企业数据隔离。
 - “模拟扫码报修”只是选择设备，不调用摄像头或生成真实二维码。
-- 完工耗材只保存文字，不扣库存或计算费用；安全勾选不是现场安全 SOP 证据。
+- 旧完工表单耗材只保存文字，实际库存通过新增领退料接口处理；安全勾选及本地SOP模板不是经批准的现场安全证明。
 - 首页状态从工单推导，不是传感器采集的设备运行状态。
 - 响应式网页并非微信小程序或原生 APP。
 

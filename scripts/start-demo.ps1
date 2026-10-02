@@ -30,6 +30,22 @@ function Test-DeployedFrontend {
     return $true
 }
 
+function Get-BuildFingerprint {
+    $taskNames = @('ApiServlet', 'DemoDomain', 'DemoException', 'DemoStore', 'FeatureAuth', 'FeatureBusiness', 'FeatureDomain', 'FeatureResult', 'FeatureSupport', 'FeatureWork', 'FileVault', 'LocalOnlyFilter')
+    $taskBytes = New-Object System.IO.MemoryStream
+    try {
+        foreach ($taskName in $taskNames) {
+            $taskClass = [System.IO.File]::ReadAllBytes((Join-Path $taskRoot "target/classes/com/equipmentmaintenance/demo/$taskName.class"))
+            $taskBytes.Write($taskClass, 0, $taskClass.Length)
+        }
+        $taskRegistry = [System.IO.File]::ReadAllBytes((Join-Path $taskRoot 'target/classes/capabilities.json'))
+        $taskBytes.Write($taskRegistry, 0, $taskRegistry.Length)
+        $taskHasher = [System.Security.Cryptography.SHA256]::Create()
+        try { return ([BitConverter]::ToString($taskHasher.ComputeHash($taskBytes.ToArray()))).Replace('-', '').ToLowerInvariant() }
+        finally { $taskHasher.Dispose() }
+    } finally { $taskBytes.Dispose() }
+}
+
 try {
     if (-not (Test-Path -LiteralPath (Join-Path $taskTomcat 'bin/catalina.bat'))) {
         throw 'Tomcat 11 installation was not found at the configured location.'
@@ -48,6 +64,7 @@ try {
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $taskWar)) {
         throw 'Maven package failed. See the build output above.'
     }
+    $taskExpectedBackend = Get-BuildFingerprint
 
     $taskExistingListener = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
     if ($taskExistingListener -and -not (Get-DemoHealth)) {
@@ -62,7 +79,8 @@ try {
 
     $taskReady = $false
     for ($taskAttempt = 0; $taskAttempt -lt 60; $taskAttempt++) {
-        if ((Get-DemoHealth) -and (Test-DeployedFrontend)) {
+        $taskCurrentHealth = Get-DemoHealth
+        if ($taskCurrentHealth -and $taskCurrentHealth.data.backendFingerprint -eq $taskExpectedBackend -and (Test-DeployedFrontend)) {
             $taskReady = $true
             break
         }

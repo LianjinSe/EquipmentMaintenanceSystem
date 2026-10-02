@@ -16,6 +16,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+        <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
             <version>6.1.0</version>
@@ -68,6 +73,7 @@
                                 <include>API.md</include>
                                 <include>功能覆盖矩阵.md</include>
                                 <include>未完成部分与实施说明.md</include>
+                                <include>本地后端扩展说明.md</include>
                             </includes>
                         </resource>
                     </webResources>

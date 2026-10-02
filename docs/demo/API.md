@@ -1,87 +1,85 @@
-# Demo API 与预留接口契约
+# Demo API 与本地后端契约
 
-> 本文与 `src/main/resources/capabilities.json` 及 Java Servlet 路由对应。修改接口时须同步更新注册表、实现、本文和测试。预留契约是设计草案，尚不构成稳定 API。
+当前 77 条路由。原33个预留入口已有本地处理器；完整原需求仍按局部实现与外部条件区分，不以路由存在代表全功能完成。
 
-已实现路由 27 个；预留能力 33 个。
+`GET /api/health` 额外返回 `backendFingerprint`，由当前Java主类和注册表计算SHA256；一键启动核对它与本次构建相同，避免纯后端更新误用旧服务。
 
-## 通用约定
+原27个演示接口继续兼容 `X-Demo-Actor`。新功能除登录外必须使用 `Authorization: Bearer <token>`；登录密码只在首次生成的 `<数据文件名>.credentials.json` 中提供，不在webapps或Git中。接口不接收外部账户凭据。
 
-- 演示 WAR 在本机 Tomcat 11 的示例地址为 `http://127.0.0.1:8080/equipment-maintenance-demo/`，应用内 API 前缀 `/api`，写入请求采用 `Content-Type: application/json`，请求体上限 512 KiB。
-- 本机过滤器同时检查连接来源与 HTTP `Host`：只接受回环来源，且域名须为 `localhost`、`127.0.0.1` 或 `[::1]`。不满足时会在进入 API Servlet 前返回 HTTP 403，因此响应是 Tomcat 错误页而非上述 JSON 错误结构。
-- 演示角色通过 `X-Demo-Actor: admin|operator|technician|inspector` 传入。它是**可伪造的演示选择器**，不是账号认证、授权、企业数据隔离或上线安全机制。写入请求必须传入有效值。
-- 成功响应为 `{ "data": ... }`。失败响应为 `{ "error": { "code": "...", "message": "...", "details": null } }`。预留接口固定返回 `501 NOT_IMPLEMENTED`，`details` 还包含能力 ID、输入草案、依赖与验收要求。
-- 新增设备、工单、计划返回 HTTP 201；其他已实现成功操作返回 200。未知路由返回 404，状态或版本不匹配返回 409。
-- 大部分写操作要求资源当前 `version`；首次读取详情/列表后携带版本提交，成功后使用返回的新版本。过期版本返回 `409 VERSION_CONFLICT`。消息已读操作是例外。
-- 日期参数格式 `YYYY-MM-DD`。任务到期和生成截止按 `Asia/Shanghai` 日期判断；时间戳为 ISO UTC 字符串。
-- 未实现真实登录与企业数据权限；GET 设备、工单、维保任务会返回所有演示数据，不能放入真实数据。
+默认上下文 `/equipment-maintenance-demo`。成功 `{data:...}`；错误 `{error:{code,message,details}}`。外部服务无配置时503 `PROVIDER_NOT_CONFIGURED`，details包含本地阻塞任务ID；PDF/NFC等不支持格式422。OCR本地返回202人工确认待办。所有请求限制本机IP和本机Host。
 
-### 常见错误
+输入ID须先通过 `/api/state`（旧演示接口）及带令牌的 `/api/catalog` 查询。更新携带version；库存requestId/遥测eventId/通知eventId/离线operationId须稳定且同ID同内容。文件上传是申请→PUT原始字节→GET授权下载。
 
-| HTTP | code | 含义 |
-|---|---|---|
-| 400 | `VALIDATION_ERROR`, `INVALID_JSON`, `GENERATION_LIMIT`, `SAFETY_CONFIRMATION_REQUIRED` | 字段、JSON、生成数量或安全勾选不符合规则 |
-| 401 | `DEMO_ACTOR_REQUIRED` | 写请求缺少有效的演示角色 |
-| 403 | `FORBIDDEN`, `ORIGIN_REJECTED` | 当前演示角色不可执行，或写请求跨站来源不符 |
-| 404 | `NOT_FOUND` | 资源或路由不存在 |
-| 409 | `VERSION_CONFLICT`, `INVALID_STATE`, `DUPLICATE_CODE` | 版本已变化、业务状态不允许，或编码重复 |
-| 413 | `PAYLOAD_TOO_LARGE` | JSON 请求体超过 512 KiB |
-| 415 | `UNSUPPORTED_MEDIA_TYPE` | 写请求不是 JSON |
-| 500 | `INTERNAL_ERROR` | 本地读取/持久化等内部失败；变更未发布 |
-| 501 | `NOT_IMPLEMENTED` | 已登记的预留接口尚未实现 |
-
-## 已实现路由
+业务校验400；缺少/无效会话401；越权403；资源缺失404；版本/状态/库存冲突409；过期上传/下载/房间410；超大请求413；类型415；不支持本地格式422；外部未配置503。详见[本地后端扩展说明](本地后端扩展说明.md)。
 
 ### GET `/api/health` — 服务状态
 
-**输入示例：**无请求体
+**实现处理器：** `health`
 
-**成功返回 data：** { mode: "demo", runtime: "java-servlet", version: "0.2.0", persistence: "json-file", today }
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 只说明本地服务可响应，不代表生产健康探针或容灾可用。
+**返回：** { mode: "demo", runtime: "java-servlet", version: "0.2.0", persistence: "json-file", today }
 
-**实现映射：** `capabilities.json` 的 handler `health` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 只说明本地服务可响应，不代表生产健康探针或容灾可用。
 
 ### GET `/api/actors` — 演示身份列表
 
-**输入示例：**无请求体
+**实现处理器：** `actors`
 
-**成功返回 data：** Actor[]：id/name/role/department
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 固定四个虚构角色。X-Demo-Actor 只用于流程演示，不能认证身份。
+**返回：** Actor[]：id/name/role/department
 
-**实现映射：** `capabilities.json` 的 handler `actors` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 固定四个虚构角色。X-Demo-Actor 只用于流程演示，不能认证身份。
 
 ### GET `/api/state` — 演示页面快照
 
-**输入示例：**无请求体
+**实现处理器：** `snapshot`
 
-**成功返回 data：** { actors, devices, orders, plans, tasks, messages, audit, summary }
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 全量读取演示数据；消息只返回当前角色的消息，审计仅管理员返回。设备和业务记录没有企业数据隔离。
+**返回：** { actors, devices, orders, plans, tasks, messages, audit, summary }
 
-**实现映射：** `capabilities.json` 的 handler `snapshot` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 全量读取演示数据；消息只返回当前角色的消息，审计仅管理员返回。设备和业务记录没有企业数据隔离。
 
 ### GET `/api/summary` — 基础统计
 
-**输入示例：**无请求体
+**实现处理器：** `summary`
 
-**成功返回 data：** { devices, openOrders, pendingReview, pendingTasks, overdueTasks, closedOrders, today }
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 直接统计当前记录；超期指未完成任务的 scheduledDate 早于上海日期。不计算 MTBF/MTTR/OEE。
+**返回：** { devices, openOrders, pendingReview, pendingTasks, overdueTasks, closedOrders, today }
 
-**实现映射：** `capabilities.json` 的 handler `summary` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 直接统计当前记录；超期指未完成任务的 scheduledDate 早于上海日期。不计算 MTBF/MTTR/OEE。
 
 ### GET `/api/capabilities` — 接口实现清单
 
-**输入示例：**无请求体
+**实现处理器：** `capabilities`
 
-**成功返回 data：** { implemented: Contract[], reserved: Contract[] }
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 与路由使用同一注册表；每个预留接口都有输入示例、依赖和验收要求。
+**返回：** { implemented: Contract[], reserved: Contract[] }
 
-**实现映射：** `capabilities.json` 的 handler `capabilities` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 与路由使用同一注册表；每个预留接口都有输入示例、依赖和验收要求。
 
 ### GET `/api/devices` — 设备查询
+
+**实现处理器：** `devices`
 
 **输入示例：**
 ```json
@@ -90,14 +88,13 @@
 }
 ```
 
+**返回：** Device[]（含 derivedStatus）
 
-**成功返回 data：** Device[]（含 derivedStatus）
-
-**行为、权限及校验：** derivedStatus 由未关闭工单推导：reported/repairing/active；不代表实时采集到的物理运行状态。
-
-**实现映射：** `capabilities.json` 的 handler `devices` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** derivedStatus 由未关闭工单推导：reported/repairing/active；不代表实时采集到的物理运行状态。
 
 ### POST `/api/devices` — 新增设备
+
+**实现处理器：** `createDevice`
 
 **输入示例：**
 ```json
@@ -109,24 +106,26 @@
 }
 ```
 
+**返回：** Device：id/code/name/location/category/status/version/createdAt
 
-**成功返回 data：** Device：id/code/name/location/category/status/version/createdAt
-
-**行为、权限及校验：** 仅管理员。code 1–40、name/location 1–80、category 1–40 字符；编码忽略大小写唯一。
-
-**实现映射：** `capabilities.json` 的 handler `createDevice` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅管理员。code 1–40、name/location 1–80、category 1–40 字符；编码忽略大小写唯一。
 
 ### GET `/api/devices/{id}/history` — 设备履历
 
-**输入示例：**无请求体
+**实现处理器：** `deviceHistory`
 
-**成功返回 data：** { device, orders: Order[], tasks: Task[], events: AuditEvent[] }
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 只查询该设备关联的工单、任务、计划事件；没有文档版本、调拨或报废履历。
+**返回：** { device, orders: Order[], tasks: Task[], events: AuditEvent[] }
 
-**实现映射：** `capabilities.json` 的 handler `deviceHistory` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 只查询该设备关联的工单、任务、计划事件；没有文档版本、调拨或报废履历。
 
 ### GET `/api/orders` — 维修工单列表
+
+**实现处理器：** `orders`
 
 **输入示例：**
 ```json
@@ -135,24 +134,26 @@
 }
 ```
 
+**返回：** Order[]
 
-**成功返回 data：** Order[]
-
-**行为、权限及校验：** 状态合法值见状态机；列表无分页，仅适合少量演示数据。
-
-**实现映射：** `capabilities.json` 的 handler `orders` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 状态合法值见状态机；列表无分页，仅适合少量演示数据。
 
 ### GET `/api/orders/{id}` — 工单详情
 
-**输入示例：**无请求体
+**实现处理器：** `order`
 
-**成功返回 data：** Order（含 completions/reviews/history）
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** id 不存在返回 404；所有完工和验收尝试保留。
+**返回：** Order（含 completions/reviews/history）
 
-**实现映射：** `capabilities.json` 的 handler `order` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** id 不存在返回 404；所有完工和验收尝试保留。
 
 ### POST `/api/orders` — 报修
+
+**实现处理器：** `createOrder`
 
 **输入示例：**
 ```json
@@ -164,14 +165,13 @@
 }
 ```
 
+**返回：** Order：初始 pending_assignment、version=1
 
-**成功返回 data：** Order：初始 pending_assignment、version=1
-
-**行为、权限及校验：** 标题 1–100、描述 1–1000 字符；priority=normal/urgent；允许各演示角色报修。重复 POST 会创建新工单，生产请求幂等尚未实现。
-
-**实现映射：** `capabilities.json` 的 handler `createOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 标题 1–100、描述 1–1000 字符；priority=normal/urgent；允许各演示角色报修。重复 POST 会创建新工单，生产请求幂等尚未实现。
 
 ### POST `/api/orders/{id}/assign` — 派单/接单前改派
+
+**实现处理器：** `assignOrder`
 
 **输入示例：**
 ```json
@@ -181,14 +181,13 @@
 }
 ```
 
+**返回：** Order：pending_acceptance
 
-**成功返回 data：** Order：pending_acceptance
-
-**行为、权限及校验：** 管理员；只允许 pending_assignment/pending_acceptance，目标须为维修人员。处理中转单另待实现。
-
-**实现映射：** `capabilities.json` 的 handler `assignOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 管理员；只允许 pending_assignment/pending_acceptance，目标须为维修人员。处理中转单另待实现。
 
 ### POST `/api/orders/{id}/accept` — 接单
+
+**实现处理器：** `acceptOrder`
 
 **输入示例：**
 ```json
@@ -197,14 +196,13 @@
 }
 ```
 
+**返回：** Order：in_progress
 
-**成功返回 data：** Order：in_progress
-
-**行为、权限及校验：** 仅被指派人或管理员；须为 pending_acceptance。
-
-**实现映射：** `capabilities.json` 的 handler `acceptOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅被指派人或管理员；须为 pending_acceptance。
 
 ### POST `/api/orders/{id}/reject` — 拒单
+
+**实现处理器：** `rejectOrder`
 
 **输入示例：**
 ```json
@@ -214,14 +212,13 @@
 }
 ```
 
+**返回：** Order：pending_assignment，清空 assigneeId
 
-**成功返回 data：** Order：pending_assignment，清空 assigneeId
-
-**行为、权限及校验：** 仅被指派人或管理员；须为 pending_acceptance；原因 1–500 字符。
-
-**实现映射：** `capabilities.json` 的 handler `rejectOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅被指派人或管理员；须为 pending_acceptance；原因 1–500 字符。
 
 ### POST `/api/orders/{id}/complete` — 提交完工
+
+**实现处理器：** `completeOrder`
 
 **输入示例：**
 ```json
@@ -234,14 +231,13 @@
 }
 ```
 
+**返回：** Order：pending_review；新增 Completion
 
-**成功返回 data：** Order：pending_review；新增 Completion
-
-**行为、权限及校验：** 仅执行人或管理员；须为 in_progress；summary 1–1000、materials 可选 0–500；工时 1–10080 整数分钟；安全勾选不等于安全证据。
-
-**实现映射：** `capabilities.json` 的 handler `completeOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅执行人或管理员；须为 in_progress；summary 1–1000、materials 可选 0–500；工时 1–10080 整数分钟；安全勾选不等于安全证据。
 
 ### POST `/api/orders/{id}/review` — 验收/退回
+
+**实现处理器：** `reviewOrder`
 
 **输入示例：**
 ```json
@@ -252,14 +248,13 @@
 }
 ```
 
+**返回：** Order：accept→closed；return→in_progress
 
-**成功返回 data：** Order：accept→closed；return→in_progress
-
-**行为、权限及校验：** 管理员或原报修人；须为 pending_review；note 1–500；完工和退回记录均保留。未实现多人验收、签名和职责分离。
-
-**实现映射：** `capabilities.json` 的 handler `reviewOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 管理员或原报修人；须为 pending_review；note 1–500；完工和退回记录均保留。未实现多人验收、签名和职责分离。
 
 ### POST `/api/orders/{id}/cancel` — 取消工单
+
+**实现处理器：** `cancelOrder`
 
 **输入示例：**
 ```json
@@ -269,24 +264,26 @@
 }
 ```
 
+**返回：** Order：cancelled
 
-**成功返回 data：** Order：cancelled
-
-**行为、权限及校验：** 报修人仅能取消 pending_assignment；管理员还可取消 pending_acceptance/in_progress；待验收及终态不能取消。
-
-**实现映射：** `capabilities.json` 的 handler `cancelOrder` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 报修人仅能取消 pending_assignment；管理员还可取消 pending_acceptance/in_progress；待验收及终态不能取消。
 
 ### GET `/api/plans` — 维保计划列表
 
-**输入示例：**无请求体
+**实现处理器：** `plans`
 
-**成功返回 data：** Plan[]
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 保存周期和检查项；暂停只影响之后的生成，不撤销既有任务。
+**返回：** Plan[]
 
-**实现映射：** `capabilities.json` 的 handler `plans` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 保存周期和检查项；暂停只影响之后的生成，不撤销既有任务。
 
 ### POST `/api/plans` — 新增周期计划
+
+**实现处理器：** `createPlan`
 
 **输入示例：**
 ```json
@@ -304,14 +301,13 @@
 }
 ```
 
+**返回：** Plan：active=true、version=1
 
-**成功返回 data：** Plan：active=true、version=1
-
-**行为、权限及校验：** 仅管理员；type=inspection/maintenance；周期 1–3650 天；日期有效且为 2000–2100；检查项 1–20 个、各 1–100 字且不重复；执行人为 technician/inspector。
-
-**实现映射：** `capabilities.json` 的 handler `createPlan` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅管理员；type=inspection/maintenance；周期 1–3650 天；日期有效且为 2000–2100；检查项 1–20 个、各 1–100 字且不重复；执行人为 technician/inspector。
 
 ### PATCH `/api/plans/{id}` — 暂停/恢复计划
+
+**实现处理器：** `togglePlan`
 
 **输入示例：**
 ```json
@@ -321,14 +317,13 @@
 }
 ```
 
+**返回：** Plan
 
-**成功返回 data：** Plan
-
-**行为、权限及校验：** 仅管理员；只更新 active；模板、周期、指派及日期变更尚未实现。
-
-**实现映射：** `capabilities.json` 的 handler `togglePlan` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅管理员；只更新 active；模板、周期、指派及日期变更尚未实现。
 
 ### POST `/api/plans/generate` — 生成到期任务
+
+**实现处理器：** `generateTasks`
 
 **输入示例：**
 ```json
@@ -337,14 +332,13 @@
 }
 ```
 
+**返回：** { generated: Task[], count, throughDate }
 
-**成功返回 data：** { generated: Task[], count, throughDate }
-
-**行为、权限及校验：** 仅管理员；截止日不得晚于上海今天；按计划原到期日逐周期补齐，每次最多 100 条；计划+日期去重；推进下次日期；无后台定时器。
-
-**实现映射：** `capabilities.json` 的 handler `generateTasks` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅管理员；截止日不得晚于上海今天；按计划原到期日逐周期补齐，每次最多 100 条；计划+日期去重；推进下次日期；无后台定时器。
 
 ### GET `/api/tasks` — 维保任务列表
+
+**实现处理器：** `tasks`
 
 **输入示例：**
 ```json
@@ -353,24 +347,26 @@
 }
 ```
 
+**返回：** Task[]
 
-**成功返回 data：** Task[]
-
-**行为、权限及校验：** 任务携带生成时检查项快照；同时列出保养和点检。
-
-**实现映射：** `capabilities.json` 的 handler `tasks` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 任务携带生成时检查项快照；同时列出保养和点检。
 
 ### GET `/api/tasks/{id}` — 任务详情
 
-**输入示例：**无请求体
+**实现处理器：** `task`
 
-**成功返回 data：** Task（含 checklist/results/history/linkedOrderId）
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 只提供两态 pending/completed；未实现接单、复核或撤销。
+**返回：** Task（含 checklist/results/history/linkedOrderId）
 
-**实现映射：** `capabilities.json` 的 handler `task` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 只提供两态 pending/completed；未实现接单、复核或撤销。
 
 ### POST `/api/tasks/{id}/complete` — 执行维保/异常转维修
+
+**实现处理器：** `completeTask`
 
 **输入示例：**
 ```json
@@ -388,82 +384,330 @@
 }
 ```
 
+**返回：** Task：completed；异常时 linkedOrderId 指向新 Order
 
-**成功返回 data：** Task：completed；异常时 linkedOrderId 指向新 Order
-
-**行为、权限及校验：** 仅指派人或管理员；必须提交所有项目且不重复；verdict=normal/abnormal；异常 remark 必填；读数为文字，无阈值判定；所有异常汇总为一个工单，与任务同次原子保存。
-
-**实现映射：** `capabilities.json` 的 handler `completeTask` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅指派人或管理员；必须提交所有项目且不重复；verdict=normal/abnormal；异常 remark 必填；读数为文字，无阈值判定；所有异常汇总为一个工单，与任务同次原子保存。
 
 ### GET `/api/messages` — 站内消息
 
-**输入示例：**无请求体
+**实现处理器：** `messages`
 
-**成功返回 data：** Message[]
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 仅当前演示角色的消息；非真实短信、微信或 APP 推送。
+**返回：** Message[]
 
-**实现映射：** `capabilities.json` 的 handler `messages` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅当前演示角色的消息；非真实短信、微信或 APP 推送。
 
 ### PATCH `/api/messages/{id}/read` — 消息已读
+
+**实现处理器：** `readMessage`
 
 **输入示例：**
 ```json
 {}
 ```
 
+**返回：** Message：read=true
 
-**成功返回 data：** Message：read=true
-
-**行为、权限及校验：** 只可修改自己的消息；重复标记已读无副作用，不使用 version。
-
-**实现映射：** `capabilities.json` 的 handler `readMessage` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 只可修改自己的消息；重复标记已读无副作用，不使用 version。
 
 ### GET `/api/audit` — 演示业务事件
 
-**输入示例：**无请求体
+**实现处理器：** `audit`
 
-**成功返回 data：** AuditEvent[]
+**输入示例：**
+```json
+null
+```
 
-**行为、权限及校验：** 仅管理员；记录业务动作而非所有读写、登录或修改前后镜像；未防篡改。
+**返回：** AuditEvent[]
 
-**实现映射：** `capabilities.json` 的 handler `audit` 由 `ApiServlet.java` 分派；业务规则位于 `DemoDomain.java`（能力清单由 Servlet 直接返回）。
+**本地规则：** 仅管理员；记录业务动作而非所有读写、登录或修改前后镜像；未防篡改。
 
-## 预留接口（调用会返回 501）
+### GET `/api/catalog` — 本地主数据查询
 
-下面的请求体是设计输入示例；服务端对预留接口不执行业务校验和持久化，直接返回 `501 NOT_IMPLEMENTED`。实际开发时需要与业务方和技术负责人确认字段、权限、幂等策略与错误码。
+**实现处理器：** `feature:catalog`
 
-### AUTH · POST `/api/auth/login` — 真实账号与认证
+**输入示例：**
+```json
+null
+```
 
-**范围：** 账号注册、密码找回、验证码、第三方登录、账号停用、实名认证、登录日志。
+**返回：** 业务记录/文件，见扩展说明
 
-**输入草案：**
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/catalog/{id}` — 创建本地主数据
+
+**实现处理器：** `feature:catalogCreate`
+
+**输入示例：**
 ```json
 {
-  "account": "<账号>",
-  "credential": "<密码或授权票据>",
+  "name": "示例；字段见扩展说明"
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### GET `/api/records/{id}` — 查询本人或管理员功能记录
+
+**实现处理器：** `feature:records`
+
+**输入示例：**
+```json
+null
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### PUT `/api/auth/accounts/{id}` — 启用停用本地账号
+
+**实现处理器：** `feature:account`
+
+**输入示例：**
+```json
+{
+  "version": 1,
+  "active": false
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/auth/password` — 修改本人密码
+
+**实现处理器：** `feature:password`
+
+**输入示例：**
+```json
+{
+  "currentPassword": "<当前密码>",
+  "newPassword": "<12字符以上新密码>"
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/auth/logout` — 撤销本人会话
+
+**实现处理器：** `feature:logout`
+
+**输入示例：**
+```json
+{}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/lifecycle/{id}/decision` — 审批资产申请
+
+**实现处理器：** `feature:lifecycleDecision`
+
+**输入示例：**
+```json
+{
+  "version": 1,
+  "decision": "approve",
+  "note": "本地批准"
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/procurement/{id}/action` — 采购审批收货
+
+**实现处理器：** `feature:procurementAction`
+
+**输入示例：**
+```json
+{
+  "version": 1,
+  "action": "approve"
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### PUT `/api/files/{id}/content` — 实际二进制上传
+
+**实现处理器：** `fileUpload`
+
+**输入示例：**
+```json
+"<原始文件字节；Content-Type须与申请一致>"
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### GET `/api/files/{id}/content` — 授权下载原始文件
+
+**实现处理器：** `fileDownload`
+
+**输入示例：**
+```json
+null
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### PUT `/api/devices/{id}/position` — 配置设备位置范围
+
+**实现处理器：** `feature:devicePosition`
+
+**输入示例：**
+```json
+{
+  "version": 1,
+  "latitude": 31.2,
+  "longitude": 121.4,
+  "radiusMeters": 50
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/ocr/{id}/confirm` — 确认人工读数
+
+**实现处理器：** `feature:ocrConfirm`
+
+**输入示例：**
+```json
+{
+  "version": 1,
+  "value": 1.2,
+  "unit": "bar"
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/tools/loans/{id}/return` — 归还工具
+
+**实现处理器：** `feature:toolReturn`
+
+**输入示例：**
+```json
+{
+  "version": 1,
+  "note": "已归还"
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/collaboration/rooms/{id}/messages` — 发送本地协作文字
+
+**实现处理器：** `feature:roomMessage`
+
+**输入示例：**
+```json
+{
+  "message": "本地消息"
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### GET `/api/collaboration/rooms/{id}/messages` — 查询房间消息
+
+**实现处理器：** `feature:roomMessages`
+
+**输入示例：**
+```json
+null
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/training/enrollments/{id}/complete` — 提交本地课程考试
+
+**实现处理器：** `feature:trainingComplete`
+
+**输入示例：**
+```json
+{
+  "version": 1,
+  "answers": {
+    "q1": "yes"
+  }
+}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/labels/{id}/revoke` — 作废标签
+
+**实现处理器：** `feature:labelRevoke`
+
+**输入示例：**
+```json
+{}
+```
+
+**返回：** 业务记录/文件，见扩展说明
+
+**本地规则：** 需要Bearer令牌；管理写入还需要管理员身份
+
+### POST `/api/auth/login` — 真实账号与认证
+
+**实现处理器：** `feature:AUTH`
+
+**输入示例：**
+```json
+{
+  "account": "admin",
+  "credential": "<读取本机首次凭据文件>",
   "provider": "password"
 }
 ```
 
+**返回：** { token, expiresAt, user }
 
-**目标返回（尚未实现）：** { token, expiresAt, user }
+**本地规则：** 本地密码登录、8小时令牌、账号停用、密码修改与会话撤销；SSO、验证码、注册、实名认证及登录设备/IP管理尚未接入；旧界面的 X-Demo-Actor 仍为演示兼容入口，不等于真实身份认证。
 
-**前置依赖：**
-- 企业身份源及开放注册政策
-- 令牌与会话方案、密码和验证码策略
+**原能力 ID：** `AUTH`
 
-**验收条件：**
-- 错误凭据及过期会话被拒绝
-- 停用账号不能继续调用接口，登录行为可审计
+**仍需接续：** SSO、验证码、注册、实名认证及登录设备/IP管理尚未接入；旧界面的 X-Demo-Actor 仍为演示兼容入口，不等于真实身份认证。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### PUT `/api/access/roles/{id}` — 组织与权限配置
 
-### ACCESS · PUT `/api/access/roles/{id}` — 组织与权限配置
+**实现处理器：** `feature:ACCESS`
 
-**范围：** 部门/班组维护、组织树、角色自定义、菜单/操作/字段/行级权限、角色复制及权限审计。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "version": 1,
@@ -477,24 +721,19 @@
 }
 ```
 
+**返回：** { role, version }
 
-**目标返回（尚未实现）：** { role, version }
+**本地规则：** 固定本地账号的功能权限和设备部门范围配置、版本与审计；菜单与字段配置仅保存元数据；没有供应商/企业租户隔离，旧演示路由未迁移到新权限模型。
 
-**前置依赖：**
-- 组织主数据及一人一责的授权规则
-- 真实认证和企业/外协数据边界
+**原能力 ID：** `ACCESS`
 
-**验收条件：**
-- 扫码、导出、附件、分享都服从权限
-- 不同部门/企业/外协越权请求返回 403，变更可追溯
+**仍需接续：** 菜单与字段配置仅保存元数据；没有供应商/企业租户隔离，旧演示路由未迁移到新权限模型。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### PUT `/api/settings` — 业务参数与移动表单
 
-### SETTINGS · PUT `/api/settings` — 业务参数与移动表单
+**实现处理器：** `feature:SETTINGS`
 
-**范围：** 故障字典、周期规则、公告、移动字段及布局、消息偏好设置；配置升级与兼容。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "version": 1,
@@ -504,24 +743,19 @@
 }
 ```
 
+**返回：** { settings, version }
 
-**目标返回（尚未实现）：** { settings, version }
+**本地规则：** 版本化字典、消息模板及安全类型的表单元数据保存；配置审批、动态前端表单和规则表达式执行未实现。
 
-**前置依赖：**
-- 参数归属、编辑权限及版本策略
-- 表单字段类型、校验及既有记录兼容规则
+**原能力 ID：** `SETTINGS`
 
-**验收条件：**
-- 配置修改不破坏历史记录
-- 非法字段/规则被拒绝，配置有版本和审批记录
+**仍需接续：** 配置审批、动态前端表单和规则表达式执行未实现。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/devices/{id}/lifecycle` — 资产档案与生命周期
 
-### ASSET · POST `/api/devices/{id}/lifecycle` — 资产档案与生命周期
+**实现处理器：** `feature:ASSET`
 
-**范围：** 设备编辑、Excel 导入导出、附件、标签打印、原值折旧、验收调拨借用封存报废。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "version": 1,
@@ -532,24 +766,19 @@
 }
 ```
 
+**返回：** { requestId, status, deviceVersion }
 
-**目标返回（尚未实现）：** { requestId, status, deviceVersion }
+**本地规则：** 调拨、停用、恢复、报废申请及审批；版本冲突、前后值、停用计划；财务折旧、Excel导入、借用和复杂审批链未实现；报废前必须结清未完成业务。
 
-**前置依赖：**
-- 资产数据与财务口径、审批人
-- 文件服务、标签规格、设备状态流转
+**原能力 ID：** `ASSET`
 
-**验收条件：**
-- 导入有错误行报告和回滚边界
-- 审批前后状态正确，履历保留前后值，报废设备不生成新任务
+**仍需接续：** 财务折旧、Excel导入、借用和复杂审批链未实现；报废前必须结清未完成业务。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/compliance/inspections` — 特种设备与证书
 
-### COMPLIANCE · POST `/api/compliance/inspections` — 特种设备与证书
+**实现处理器：** `feature:COMPLIANCE`
 
-**范围：** 检定校验、安全检查、人员资质与到期提醒。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "deviceId": "<ID>",
@@ -559,24 +788,19 @@
 }
 ```
 
+**返回：** { inspectionId, reminders }
 
-**目标返回（尚未实现）：** { inspectionId, reminders }
+**本地规则：** 本地证书/批准标准关联、有效期校验、检查计划和站内提醒记录；不推断法规，不替代合格机构检验；提前提醒记录尚无后台定时发送器。
 
-**前置依赖：**
-- 业务及安全负责人确认适用规则
-- 合格机构、证书数据源、提前提醒规则
+**原能力 ID：** `COMPLIANCE`
 
-**验收条件：**
-- 适用期限及资质限制正确
-- 过期/不合格的处置流程和证据可追溯
+**仍需接续：** 不推断法规，不替代合格机构检验；提前提醒记录尚无后台定时发送器。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### PUT `/api/devices/{id}/bom` — 设备关系与 BOM
 
-### BOM · PUT `/api/devices/{id}/bom` — 设备关系与 BOM
+**实现处理器：** `feature:BOM`
 
-**范围：** 整机部件零件、父子/替代关系、备件关联。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "version": 1,
@@ -590,24 +814,19 @@
 }
 ```
 
+**返回：** { tree, version }
 
-**目标返回（尚未实现）：** { tree, version }
+**本地规则：** 版本化父子设备与备件关系；拒绝重复、自引用和跨设备环路；替代件生效规则、复杂单位换算及前端树图未实现。
 
-**前置依赖：**
-- 设备及备件编码体系
-- 版本、替代件及数量单位规则
+**原能力 ID：** `BOM`
 
-**验收条件：**
-- 环路与重复关系被拒绝
-- 变更保留版本，领料可按适用 BOM 查件
+**仍需接续：** 替代件生效规则、复杂单位换算及前端树图未实现。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/iot/telemetry` — 设备数据与 IoT 告警
 
-### IOT · POST `/api/iot/telemetry` — 设备数据与 IoT 告警
+**实现处理器：** `feature:IOT`
 
-**范围：** MQTT/OPC UA/Modbus 等网关接入、运行状态、时序数据、异常阈值及自动报修。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "deviceId": "<ID>",
@@ -619,24 +838,19 @@
 }
 ```
 
+**返回：** { accepted, duplicate, alarmIds }
 
-**目标返回（尚未实现）：** { accepted, duplicate, alarmIds }
+**本地规则：** 遥测去重、乱序识别、温度/振动阈值、告警抑制/恢复和关联工单；通过HTTP输入本地点位；没有网关接入、数据源签名或传感器可信采集。
 
-**前置依赖：**
-- 网关及点位表、采样频率、单位
-- 时钟、断连、重复/乱序与设备映射规则
+**原能力 ID：** `IOT`
 
-**验收条件：**
-- 重复与乱序数据处理可验证
-- 告警抑制/恢复准确，自动工单不重复，物理状态与业务状态区分
+**仍需接续：** 通过HTTP输入本地点位；没有网关接入、数据源签名或传感器可信采集。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/scheduling/preview` — 高级计划与排程
 
-### SCHEDULE · POST `/api/scheduling/preview` — 高级计划与排程
+**实现处理器：** `feature:SCHEDULE`
 
-**范围：** 自动定时生成、运行时长/产量/状态触发、甘特图、负载、批量调整和路线规划。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "planIds": [],
@@ -645,60 +859,63 @@
     "to": "<日期>"
   },
   "triggers": [
-    "runtime"
+    "calendar"
   ],
   "resourceIds": []
 }
 ```
 
+**返回：** { proposedTasks, conflicts, explanation }
 
-**目标返回（尚未实现）：** { proposedTasks, conflicts, explanation }
+**本地规则：** 90天内日期计划预览、资源筛选与同日冲突解释；运行时长、产量触发没有数据时仅报告缺项；不执行自动调度或甘特图。
 
-**前置依赖：**
-- 生产日历、运行/产量数据、人员技能
-- 计划变更、补任务、停用和调度规则
+**原能力 ID：** `SCHEDULE`
 
-**验收条件：**
-- 跨时区/周期边界与重试不重复
-- 排程冲突可解释，暂停/变更对既有任务的影响明确
+**仍需接续：** 运行时长、产量触发没有数据时仅报告缺项；不执行自动调度或甘特图。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/workflows/definitions` — 派单、SLA 与流程引擎
 
-### WORKFLOW · POST `/api/workflows/definitions` — 派单、SLA 与流程引擎
+**实现处理器：** `feature:WORKFLOW`
 
-**范围：** 自动派单、抢单、处理中转单/挂起、多节点审批、委托、SLA 计时和超时升级。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
-  "name": "<流程>",
+  "name": "本地流程定义",
   "version": 1,
-  "nodes": [],
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "next": [
+        "end"
+      ]
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "next": []
+    }
+  ],
   "rules": {
-    "assignment": "skill",
+    "assignment": "manual",
     "timeoutMinutes": 60
   }
 }
 ```
 
+**返回：** { definitionId, version, validation }
 
-**目标返回（尚未实现）：** { definitionId, version, validation }
+**本地规则：** 有向无环流程定义校验和不可变版本存储；定义只保存，不替代维修状态机；技能自动派单、抢单和SLA计时未运行。
 
-**前置依赖：**
-- 技能及工作日历、流程节点权限
-- 计时暂停、升级责任人、流程版本与在途兼容规则
+**原能力 ID：** `WORKFLOW`
 
-**验收条件：**
-- 并发抢单唯一成功，非法流转失败
-- 超时边界及审批委托可验证，流程修改不破坏在途单据
+**仍需接续：** 定义只保存，不替代维修状态机；技能自动派单、抢单和SLA计时未运行。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/analytics/calculate` — 费用、绩效及高级指标
 
-### COST · POST `/api/analytics/calculate` — 费用、绩效及高级指标
+**实现处理器：** `feature:COST`
 
-**范围：** 人工耗材外协费用、停机时间、MTBF/MTTR/OEE、趋势/排名、满意度及绩效。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "period": {
@@ -716,24 +933,19 @@
 }
 ```
 
+**返回：** { metrics, missingInputs, sourceReferences }
 
-**目标返回（尚未实现）：** { metrics, missingInputs, sourceReferences }
+**本地规则：** 从完工记录计算分钟MTTR；有输入才计算MTBF/OEE，缺项返回null；不是正式费用/财务/绩效口径；MTTR以完工尝试为单位，维度聚合尚未实现。
 
-**前置依赖：**
-- 指标字典、生产时长/产量/良品及故障数据
-- 费率、成本归集、统计排除规则和验收人
+**原能力 ID：** `COST`
 
-**验收条件：**
-- 指标能逐项回查原始数据
-- 缺少运行/生产数据时明确不可计算，不返回伪造的零值
+**仍需接续：** 不是正式费用/财务/绩效口径；MTTR以完工尝试为单位，维度聚合尚未实现。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### GET `/api/knowledge/search` — 故障知识与智能检索
 
-### KNOWLEDGE · GET `/api/knowledge/search` — 故障知识与智能检索
+**实现处理器：** `feature:KNOWLEDGE`
 
-**范围：** 故障分类、案例、FAQ、应急方案、故障树、帕累托及类似案例推荐。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "query": {
@@ -743,24 +955,19 @@
 }
 ```
 
+**返回：** { items, total, sourceReferences }
 
-**目标返回（尚未实现）：** { items, total, sourceReferences }
+**本地规则：** 审核知识的关键词和设备型号检索；保留来源；没有向量搜索、自动AI推荐或企业知识权限分级。
 
-**前置依赖：**
-- 审核后的知识来源、权限和内容责任人
-- 版本、适用设备型号、安全内容审核规则
+**原能力 ID：** `KNOWLEDGE`
 
-**验收条件：**
-- 检索结果有来源及适用范围
-- 受限资料不可泄露；推荐错误或无证据时有明确处理路径
+**仍需接续：** 没有向量搜索、自动AI推荐或企业知识权限分级。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/inventory/transactions` — 备件、领退料与盘点
 
-### INVENTORY · POST `/api/inventory/transactions` — 备件、领退料与盘点
+**实现处理器：** `feature:INVENTORY`
 
-**范围：** 备件分类、多仓库/库位、占用、领退料、以旧换新、盘点盘盈亏、库存预警。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "requestId": "<唯一请求>",
@@ -777,24 +984,19 @@
 }
 ```
 
+**返回：** { transactionId, balances, ledgerReferences }
 
-**目标返回（尚未实现）：** { transactionId, balances, ledgerReferences }
+**本地规则：** 小数数量库存、领料/退料/收货、幂等请求、单位及不足库存校验；单进程JSON事务；不支持多Tomcat实例并发、成本计价或完整盘点。
 
-**前置依赖：**
-- 仓库及备件主数据、单位和唯一入账凭据
-- 库存/工单耗材的扣减时点、并发锁及成本规则
+**原能力 ID：** `INVENTORY`
 
-**验收条件：**
-- 同一请求只入账一次，库存与流水可对账
-- 不足库存与并发领料正确处理，退料不重复增加库存
+**仍需接续：** 单进程JSON事务；不支持多Tomcat实例并发、成本计价或完整盘点。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/procurement/requests` — 采购及供应商合同
 
-### PROCUREMENT · POST `/api/procurement/requests` — 采购及供应商合同
+**实现处理器：** `feature:PROCUREMENT`
 
-**范围：** 采购申请审批、供应商合同、价格趋势、交货质量、急采及电子发票。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "supplierId": "<ID>",
@@ -809,51 +1011,41 @@
 }
 ```
 
+**返回：** { requestId, approvalStatus }
 
-**目标返回（尚未实现）：** { requestId, approvalStatus }
+**本地规则：** 本地供应商/有效合同校验、申请、批准、收货与库存流水；没有ERP、发票、付款、税务或外部供应商账号。
 
-**前置依赖：**
-- ERP/采购主责、供应商编码、合同规则
-- 税务发票接口、验收及结算责任人
+**原能力 ID：** `PROCUREMENT`
 
-**验收条件：**
-- 申请、收货、库存、结算可对账
-- 供应商仅能查看本方单据，重复同步不重复入账
+**仍需接续：** 没有ERP、发票、付款、税务或外部供应商账号。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/reports/export` — 报表、打印和大屏
 
-### REPORT · POST `/api/reports/export` — 报表、打印和大屏
+**实现处理器：** `feature:REPORT`
 
-**范围：** 标准报表、可视化图表、大屏、自定义报表、BI 钻取、定时生成、PDF/Excel/打印模板。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
-  "reportType": "<类型>",
+  "reportType": "orders",
   "filters": {},
-  "format": "pdf",
-  "templateId": "<ID>"
+  "format": "csv",
+  "templateId": "local"
 }
 ```
 
+**返回：** { jobId, status, downloadUrl, expiresAt }
 
-**目标返回（尚未实现）：** { jobId, status, downloadUrl, expiresAt }
+**本地规则：** 管理员按过滤条件生成实际CSV文件并通过授权接口下载；PDF、打印模板和大数据异步取消未配置，请求PDF返回422。
 
-**前置依赖：**
-- 数据口径及字段权限
-- 文件生成器、模板、性能容量和下载有效期
+**原能力 ID：** `REPORT`
 
-**验收条件：**
-- 导出与页面查询口径一致且无越权字段
-- 大数据异步导出可取消，模板及打印结果人工验收
+**仍需接续：** PDF、打印模板和大数据异步取消未配置，请求PDF返回422。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/integrations/jobs` — ERP/OA/MES/HR 接口
 
-### INTEGRATION · POST `/api/integrations/jobs` — ERP/OA/MES/HR 接口
+**实现处理器：** `feature:INTEGRATION`
 
-**范围：** 跨系统主数据、单据同步、接口配置及同步任务。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "system": "ERP",
@@ -864,24 +1056,19 @@
 }
 ```
 
+**返回：** { jobId, accepted, reconciliationUrl }
 
-**目标返回（尚未实现）：** { jobId, accepted, reconciliationUrl }
+**本地规则：** local/equipment/import 批量原子导入及请求去重；外部任务明确阻塞；ERP/OA/MES/HR未配置，返回503 PROVIDER_NOT_CONFIGURED，没有同步成功声明。
 
-**前置依赖：**
-- 逐系统接口文档、沙箱、姓名及交付承诺
-- 数据主责、编码映射、游标、错误补偿规则
+**原能力 ID：** `INTEGRATION`
 
-**验收条件：**
-- 失败重试及重复请求不重复建账
-- 双边可对账，失败记录可定位并按授权补偿
+**仍需接续：** ERP/OA/MES/HR未配置，返回503 PROVIDER_NOT_CONFIGURED，没有同步成功声明。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/outsource/orders` — 委外与维保商协作
 
-### OUTSOURCE · POST `/api/outsource/orders` — 委外与维保商协作
+**实现处理器：** `feature:OUTSOURCE`
 
-**范围：** 取件维修送回、报价、外委费用、验收评分、合同和结算。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "orderId": "<ID>",
@@ -891,24 +1078,19 @@
 }
 ```
 
+**返回：** { externalOrderId, status }
 
-**目标返回（尚未实现）：** { externalOrderId, status }
+**本地规则：** 有效合同和工单的本地委外登记，拒绝重复活动登记；外部派送、供应商身份、报价付款和内外状态回传未配置。
 
-**前置依赖：**
-- 外协身份、数据隔离和服务合同
-- 内部与外部状态映射、付款与验收权责
+**原能力 ID：** `OUTSOURCE`
 
-**验收条件：**
-- 外协仅操作所属任务
-- 内外工单状态一致且报价、发票、验收记录可关联
+**仍需接续：** 外部派送、供应商身份、报价付款和内外状态回传未配置。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/files/uploads` — 照片、视频与技术资料
 
-### FILE · POST `/api/files/uploads` — 照片、视频与技术资料
+**实现处理器：** `feature:FILE`
 
-**范围：** 作业前后照片、视频、语音、图纸手册、标注、水印、上传及下载。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "entityType": "order",
@@ -919,24 +1101,19 @@
 }
 ```
 
+**返回：** { uploadId, uploadUrl, expiresAt }
 
-**目标返回（尚未实现）：** { uploadId, uploadUrl, expiresAt }
+**本地规则：** 两步实际字节上传、大小/类型/图片内容校验、摘要与授权下载；文件为本机存储；没有断点续传、病毒扫描和企业保留期策略。
 
-**前置依赖：**
-- 文件存储与访问鉴权、大小和类型限制
-- 保留期、扫描、失败重传及附件备份
+**原能力 ID：** `FILE`
 
-**验收条件：**
-- 越权上传/下载失败
-- 伪造类型、大文件、重复与中断上传可验证，附件随数据恢复
+**仍需接续：** 文件为本机存储；没有断点续传、病毒扫描和企业保留期策略。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/labels/generate` — 二维码/NFC/RFID 与分享
 
-### LABEL · POST `/api/labels/generate` — 二维码/NFC/RFID 与分享
+**实现处理器：** `feature:LABEL`
 
-**范围：** 唯一标签、打印样式、扫码身份跳转、NFC/RFID 及微信分享。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "entityType": "device",
@@ -946,24 +1123,19 @@
 }
 ```
 
+**返回：** { labels, printJobId }
 
-**目标返回（尚未实现）：** { labels, printJobId }
+**本地规则：** ZXing生成真实QR SVG、标签撤销、设备关联和授权下载；QR载荷用于本地设备/标签识别；没有移动端扫码页面、打印机、NFC/RFID写入器。
 
-**前置依赖：**
-- 标签编码/打印机和端硬件能力
-- 链接有效期、登录跳转及共享权限
+**原能力 ID：** `LABEL`
 
-**验收条件：**
-- 标签可实物扫码并找到正确设备
-- 分享/标签不能绕过身份与数据权限，作废标签失效
+**仍需接续：** QR载荷用于本地设备/标签识别；没有移动端扫码页面、打印机、NFC/RFID写入器。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/mobile/session` — 微信/支付宝与原生 APP
 
-### MOBILE · POST `/api/mobile/session` — 微信/支付宝与原生 APP
+**实现处理器：** `feature:MOBILE`
 
-**范围：** 真实小程序、原生 APP、专属工作台、快捷入口、版本更新、平板适配。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "platform": "wechat",
@@ -972,24 +1144,19 @@
 }
 ```
 
+**返回：** { session, permittedFeatures, updatePolicy }
 
-**目标返回（尚未实现）：** { session, permittedFeatures, updatePolicy }
+**本地规则：** 已认证web端会话与角色能力返回；平台任务明确阻塞；微信/支付宝/native授权服务未配置，返回503；无小程序或原生应用。
 
-**前置依赖：**
-- 平台主体/账号/域名、真机和发布流程
-- 登录、通知权限、应用版本及兼容矩阵
+**原能力 ID：** `MOBILE`
 
-**验收条件：**
-- 在批准的机型、系统、平台版本验收
-- 平台授权和深链打开正常，低版本及权限拒绝有处理路径
+**仍需接续：** 微信/支付宝/native授权服务未配置，返回503；无小程序或原生应用。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/offline/sync` — 离线同步
 
-### OFFLINE · POST `/api/offline/sync` — 离线同步
+**实现处理器：** `feature:OFFLINE`
 
-**范围：** 离线任务包、加密存储、附件同步、重复/冲突和账号权限变化。当前用户确认在线作业，后续按必要性立项。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "clientId": "<ID>",
@@ -1004,24 +1171,19 @@
 }
 ```
 
+**返回：** { acknowledged, conflicts, serverVersion }
 
-**目标返回（尚未实现）：** { acknowledged, conflicts, serverVersion }
+**本地规则：** 限定业务操作的幂等同步、账号绑定和版本冲突列表；没有离线客户端、附件队列、端侧加密或断网实测；本项目现场无需离线。
 
-**前置依赖：**
-- 实体版本、操作幂等和冲突裁决规则
-- 端侧密钥、安全擦除及断网验收环境
+**原能力 ID：** `OFFLINE`
 
-**验收条件：**
-- 重连后数据与附件无重复和遗漏
-- 并发冲突、退出登录及撤权后离线数据处理可验证
+**仍需接续：** 没有离线客户端、附件队列、端侧加密或断网实测；本项目现场无需离线。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/sop/executions` — 标准化安全作业
 
-### SOP · POST `/api/sop/executions` — 标准化安全作业
+**实现处理器：** `feature:SOP`
 
-**范围：** SOP 顺序、安全确认、断电挂牌、工具核对、润滑五定及强制拍照。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "taskId": "<ID>",
@@ -1036,24 +1198,19 @@
 }
 ```
 
+**返回：** { executionId, nextStep, status }
 
-**目标返回（尚未实现）：** { executionId, nextStep, status }
+**本地规则：** 按模板顺序、证据要求保存检查步骤；未完成SOP阻止任务完工；本地模板为示例，尚未经业务/安全负责人批准，不能当现场安全证明。
 
-**前置依赖：**
-- 经业务及安全负责人批准的作业标准
-- 不可跳步策略、证据要求及异常处置
+**原能力 ID：** `SOP`
 
-**验收条件：**
-- 未完成必需步骤不能完工
-- 标准版本与每步证据保留；软件记录的责任边界确认
+**仍需接续：** 本地模板为示例，尚未经业务/安全负责人批准，不能当现场安全证明。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/signatures` — 电子签名、签章与归档
 
-### SIGN · POST `/api/signatures` — 电子签名、签章与归档
+**实现处理器：** `feature:SIGN`
 
-**范围：** 手写签名、双签、多节点验收、电子签章、公章 PDF 归档。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "entityType": "order",
@@ -1065,24 +1222,19 @@
 }
 ```
 
+**返回：** { signatureId, documentHash, archivedUrl }
 
-**目标返回（尚未实现）：** { signatureId, documentHash, archivedUrl }
+**本地规则：** 本地账号对明确单据版本留痕、SHA256摘要/HMAC与不可变附件；仅本地留痕，不是有法律效力的第三方电子签章；外部provider返回503。
 
-**前置依赖：**
-- 身份确认、签署权限和适用要求
-- 签章服务、原文摘要、存证与保留规则
+**原能力 ID：** `SIGN`
 
-**验收条件：**
-- 签署对应的单据版本可证明且不可被后改冒用
-- 签署拒绝、撤回、归档及权限有验收记录
+**仍需接续：** 仅本地留痕，不是有法律效力的第三方电子签章；外部provider返回503。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/location/checkins` — 定位、导航与轨迹
 
-### LOCATION · POST `/api/location/checkins` — 定位、导航与轨迹
+**实现处理器：** `feature:LOCATION`
 
-**范围：** GPS/NFC 打卡、GIS、蓝牙 Beacon、巡检路线、库位/楼层导航、人员轨迹。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "taskId": "<ID>",
@@ -1095,24 +1247,19 @@
 }
 ```
 
+**返回：** { checkinId, matched, accuracy }
 
-**目标返回（尚未实现）：** { checkinId, matched, accuracy }
+**本地规则：** 设备坐标/范围配置、任务/标签匹配和距离+精度计算；坐标为客户端自报，physicalLocationVerified=false；无硬件防伪或实地到位证明。
 
-**前置依赖：**
-- 地图/室内设施、定位精度和有效区域
-- 知情授权、查看权限、保留期及伪造检测
+**原能力 ID：** `LOCATION`
 
-**验收条件：**
-- 定位拒绝及低精度有处理路径
-- 实地到位判断可验收，轨迹仅授权人员可见
+**仍需接续：** 坐标为客户端自报，physicalLocationVerified=false；无硬件防伪或实地到位证明。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/ocr/readings` — 仪表 OCR 与采集
 
-### OCR · POST `/api/ocr/readings` — 仪表 OCR 与采集
+**实现处理器：** `feature:OCR`
 
-**范围：** 仪表盘识别、人工复核、阈值标红和照片水印。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "taskId": "<ID>",
@@ -1122,24 +1269,19 @@
 }
 ```
 
+**返回：** { value, unit, confidence, requiresConfirmation }
 
-**目标返回（尚未实现）：** { value, unit, confidence, requiresConfirmation }
+**本地规则：** 图片与检查项关联、人工确认待办、可审计人工读数确认；没有OCR引擎；初次返回202 manual_required、value/confidence=null，绝不伪造识别结果。
 
-**前置依赖：**
-- 仪表类型、样本、阈值和允许误差
-- 识别服务及人工确认规则
+**原能力 ID：** `OCR`
 
-**验收条件：**
-- 在批准样本上达到业务确定的误差范围
-- 低置信度转人工，原图与最终确认读数关联
+**仍需接续：** 没有OCR引擎；初次返回202 manual_required、value/confidence=null，绝不伪造识别结果。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/tools/loans` — 工具借还与校准
 
-### TOOL · POST `/api/tools/loans` — 工具借还与校准
+**实现处理器：** `feature:TOOL`
 
-**范围：** 工具柜、借还、超时提醒、个人工具箱和校准期限。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "toolId": "<ID>",
@@ -1149,50 +1291,40 @@
 }
 ```
 
+**返回：** { loanId, status, calibrationValid }
 
-**目标返回（尚未实现）：** { loanId, status, calibrationValid }
+**本地规则：** 工具校准有效期、唯一借出、本人/管理员归还和记录；没有智能柜、失效工具实物控制、自动逾期推送。
 
-**前置依赖：**
-- 工具编码、保管人、柜体接口和证书
-- 借还授权、逾期及失效工具限制
+**原能力 ID：** `TOOL`
 
-**验收条件：**
-- 重复借出被拒绝，归还可核对
-- 过期校准工具不能按批准规则投入作业
+**仍需接续：** 没有智能柜、失效工具实物控制、自动逾期推送。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/collaboration/rooms` — 通讯与专家协作
 
-### COLLAB · POST `/api/collaboration/rooms` — 通讯与专家协作
+**实现处理器：** `feature:COLLAB`
 
-**范围：** 工单评论/@、临时讨论组、视频/语音对讲、屏幕标注、专家技能库和人员联系。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "orderId": "<ID>",
   "participantIds": [],
-  "mode": "video"
+  "mode": "text"
 }
 ```
 
+**返回：** { roomId, joinUrl, expiresAt }
 
-**目标返回（尚未实现）：** { roomId, joinUrl, expiresAt }
+**本地规则：** 有成员边界和到期时间的本地文字协作房间/消息；视频服务未配置，video请求503；尚无聊天前端、实时WebSocket及录制。
 
-**前置依赖：**
-- 通讯提供方、企业目录及专家技能
-- 参与权限、网络能力、录制和保留政策
+**原能力 ID：** `COLLAB`
 
-**验收条件：**
-- 非参与者不能加入或读记录
-- 网络中断可恢复，协作内容与工单关联
+**仍需接续：** 视频服务未配置，video请求503；尚无聊天前端、实时WebSocket及录制。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### GET `/api/models/{id}` — AR 与 3D 模型
 
-### AR3D · GET `/api/models/{id}` — AR 与 3D 模型
+**实现处理器：** `feature:AR3D`
 
-**范围：** 设备爆炸图、AR 步骤叠加、AR 眼镜远程协作。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "query": {
@@ -1202,24 +1334,19 @@
 }
 ```
 
+**返回：** { modelUrl, version, parts, instructions }
 
-**目标返回（尚未实现）：** { modelUrl, version, parts, instructions }
+**本地规则：** 已上传内嵌glTF2.0资产与设备/部件/说明的授权查询；需要用户上传合法模型；无AR渲染、硬件定位或实物版本验收。
 
-**前置依赖：**
-- 合法模型资产、设备部件映射及版本
-- 端渲染/AR 硬件、定位精度与现场验证
+**原能力 ID：** `AR3D`
 
-**验收条件：**
-- 模型与实物版本匹配
-- 目标机型可加载，步骤位置和部件标识经现场确认
+**仍需接续：** 需要用户上传合法模型；无AR渲染、硬件定位或实物版本验收。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/training/enrollments` — 培训、证书与个人绩效
 
-### TRAINING · POST `/api/training/enrollments` — 培训、证书与个人绩效
+**实现处理器：** `feature:TRAINING`
 
-**范围：** 维修视频学习、考试认证、技能矩阵、计件工资、奖惩、个人提升。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "courseId": "<ID>",
@@ -1228,24 +1355,19 @@
 }
 ```
 
+**返回：** { enrollmentId, progress, qualificationStatus }
 
-**目标返回（尚未实现）：** { enrollmentId, progress, qualificationStatus }
+**本地规则：** 报名、题目答案校验、成绩和本地课程有效期证书；仅本地培训记录；无HR、工资、奖惩或外部资质核验。
 
-**前置依赖：**
-- 培训内容、考试题库、证书及 HR 主责
-- 薪酬/奖惩口径、可见范围与批准流程
+**原能力 ID：** `TRAINING`
 
-**验收条件：**
-- 学习考试与有效资质关联
-- 工资和评价可核对原始规则，敏感信息严格限制访问
+**仍需接续：** 仅本地培训记录；无HR、工资、奖惩或外部资质核验。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/intelligence/jobs` — 预测维护、孪生与语音
 
-### AI · POST `/api/intelligence/jobs` — 预测维护、孪生与语音
+**实现处理器：** `feature:AI`
 
-**范围：** 故障概率、预知维修、数字孪生温度/振动映射、维修模拟、语音指令及记录。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "kind": "prediction",
@@ -1256,24 +1378,19 @@
 }
 ```
 
+**返回：** { jobId, result, evidence, uncertainty }
 
-**目标返回（尚未实现）：** { jobId, result, evidence, uncertainty }
+**本地规则：** 确定性阈值规则评估并返回输入证据；外部模型任务明确阻塞；规则不是预测模型。prediction/twin/voice未配置时503，未经授权不执行关键动作。
 
-**前置依赖：**
-- 历史/实时数据和模型资产、业务效果基线
-- 专项验证、误报漏报、人工确认与回退策略
+**原能力 ID：** `AI`
 
-**验收条件：**
-- 输出附数据/模型来源及不确定性
-- 按批准指标验收，语音/AI 不能未经授权自动产生关键业务动作
+**仍需接续：** 规则不是预测模型。prediction/twin/voice未配置时503，未经授权不执行关键动作。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/customizations` — 低代码与国际化
 
-### LOWCODE · POST `/api/customizations` — 低代码与国际化
+**实现处理器：** `feature:LOWCODE`
 
-**范围：** 拖拽表单、流程/报表配置、多语言和发布回滚。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "version": 1,
@@ -1284,24 +1401,19 @@
 }
 ```
 
+**返回：** { customizationId, validation, publishedVersion }
 
-**目标返回（尚未实现）：** { customizationId, validation, publishedVersion }
+**本地规则：** 安全字段类型的表单/流程引用/语言元数据版本发布；仅元数据；没有动态脚本执行、前端低代码渲染、完整发布回滚或翻译系统。
 
-**前置依赖：**
-- 字段/流程元模型、权限、插件边界
-- 翻译、时区单位、配置迁移及兼容政策
+**原能力 ID：** `LOWCODE`
 
-**验收条件：**
-- 恶意配置和权限绕过被拒绝
-- 历史单据兼容，发布回滚和多语言格式可验证
+**仍需接续：** 仅元数据；没有动态脚本执行、前端低代码渲染、完整发布回滚或翻译系统。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/security/audit-exports` — 生产安全与审计回溯
 
-### SECURITY · POST `/api/security/audit-exports` — 生产安全与审计回溯
+**实现处理器：** `feature:SECURITY`
 
-**范围：** HTTPS、端存储加密、全量操作与前后值、版本回溯、防篡改及审计导出。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "from": "<时间>",
@@ -1311,24 +1423,19 @@
 }
 ```
 
+**返回：** { jobId, signedDigest, archiveUrl }
 
-**目标返回（尚未实现）：** { jobId, signedDigest, archiveUrl }
+**本地规则：** 按时间/实体导出真实审计记录及本地HMAC摘要；只能证明导出内容未改，不能证明导出前本机管理员未改历史；无第三方存证。
 
-**前置依赖：**
-- 安全标准、密钥管理、保留期及审计权限
-- 日志链路与加密/解密恢复方案
+**原能力 ID：** `SECURITY`
 
-**验收条件：**
-- 密钥轮换、越权和审计完整性可验证
-- 恢复/回溯保留历史且经过授权，不能通过改本地文件冒充历史
+**仍需接续：** 只能证明导出内容未改，不能证明导出前本机管理员未改历史；无第三方存证。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/backups/jobs` — 备份恢复与部署
 
-### BACKUP · POST `/api/backups/jobs` — 备份恢复与部署
+**实现处理器：** `feature:BACKUP`
 
-**范围：** 每日备份/保留30天、手动恢复、容灾、生产监控、多种云部署。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "kind": "backup",
@@ -1337,45 +1444,35 @@
 }
 ```
 
+**返回：** { jobId, status, manifest, verification }
 
-**目标返回（尚未实现）：** { jobId, status, manifest, verification }
+**本地规则：** 实际数据+附件ZIP清单、摘要/HMAC校验及显式确认恢复，撤销会话；本机备份可恢复但不是异地灾备；恢复前须备份当前数据，不包含本机签名密钥迁移。
 
-**前置依赖：**
-- 批准的恢复点/时间目标、存储及运行负责人
-- 数据库和附件一致备份、恢复权限及切换方案
+**原能力 ID：** `BACKUP`
 
-**验收条件：**
-- 真实执行恢复演练并对账
-- 备份失败能告警，批准的恢复目标满足；导出 JSON 不算完整容灾
+**仍需接续：** 本机备份可恢复但不是异地灾备；恢复前须备份当前数据，不包含本机签名密钥迁移。
 
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+### POST `/api/notifications/deliveries` — 多渠道消息与告警升级
 
-### PUSH · POST `/api/notifications/deliveries` — 多渠道消息与告警升级
+**实现处理器：** `feature:PUSH`
 
-**范围：** 微信/支付宝服务通知、短信、APP Push、偏好时段、多级提醒及库存/证书告警。
-
-**输入草案：**
+**输入示例：**
 ```json
 {
   "eventId": "<唯一事件>",
   "recipientIds": [],
   "channels": [
-    "wechat"
+    "in_app"
   ],
   "templateId": "<ID>",
   "variables": {}
 }
 ```
 
+**返回：** { deliveryId, channelResults, retryAt }
 
-**目标返回（尚未实现）：** { deliveryId, channelResults, retryAt }
+**本地规则：** 站内消息事件去重、多个收件人和外部渠道逐项结果；微信/短信/邮件未配置不发送；无自动重试器或到达回执，外部渠道返回明确失败。
 
-**前置依赖：**
-- 平台模板、许可、账号和渠道资费
-- 事件去重、重试、回执、静默时段及升级规则
+**原能力 ID：** `PUSH`
 
-**验收条件：**
-- 发送失败及限流可追踪并补发
-- 关键待办不依赖单次推送成功，不能承诺无遗漏触达
-
-**当前实际响应：** `501 NOT_IMPLEMENTED`；该接口没有任何业务副作用。
+**仍需接续：** 微信/短信/邮件未配置不发送；无自动重试器或到达回执，外部渠道返回明确失败。

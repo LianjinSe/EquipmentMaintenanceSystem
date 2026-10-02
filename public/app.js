@@ -153,12 +153,6 @@ async function action(name, id, buttonElement) {
     const info = await api(`/api/devices/${id}/history`);
     return openDialog(info.device.code + ' · 设备履历', `<p class="dialog-description">${e(info.device.name)} · ${e(info.device.location)}</p><section class="detail-block"><h3>维修记录</h3>${ordersTable(info.orders, true)}</section><section class="detail-block"><h3>维保记录</h3>${taskLines(info.tasks)}</section>`);
   }
-  if (name === 'try-reserved') {
-    const item = capabilities.reserved.find(value => value.id === id);
-    try { await api(item.path.replace('{id}', 'demo'), item.method, item.method === 'GET' ? undefined : item.request); }
-    catch (error) { return toast(`${item.id} · ${error.code}：${error.message}`, true); }
-    throw new Error('预留接口意外返回成功，请检查路由');
-  }
   buttonElement.disabled = true;
   try {
     if (name === 'assign' || name === 'accept') {
